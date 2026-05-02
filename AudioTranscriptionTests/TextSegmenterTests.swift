@@ -101,6 +101,28 @@ final class TextSegmenterTests: XCTestCase {
         XCTAssertEqual(decoded, [zhValue])
     }
 
+    func testSegmentLocalValueFillsBlankCounterpart() {
+        let zhValue = TextSegmentValue(sourceLang: "zh", sourceText: "这是第一句。")
+        let enValue = TextSegmentValue(sourceLang: "en", sourceText: "This is one sentence.")
+
+        XCTAssertEqual(
+            zhValue.fillingCounterpart(with: "This is the first sentence."),
+            TextSegmentValue(
+                sourceLang: "zh",
+                enText: "This is the first sentence.",
+                zhText: "这是第一句。"
+            )
+        )
+        XCTAssertEqual(
+            enValue.fillingCounterpart(with: "这是一个句子。"),
+            TextSegmentValue(
+                sourceLang: "en",
+                enText: "This is one sentence.",
+                zhText: "这是一个句子。"
+            )
+        )
+    }
+
     private func audioHint(near marker: String, in text: String) -> AudioBoundaryHint {
         guard let markerRange = text.range(of: marker) else {
             return AudioBoundaryHint(time: 0, duration: 0.25, confidence: 0.7)

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Translation
 import UniformTypeIdentifiers
 
 @main
@@ -30,6 +31,8 @@ final class TranscriptionModel: ObservableObject {
     @Published private(set) var selectedAudioURL: URL?
     @Published private(set) var audioBoundaryHints: [AudioBoundaryHint] = []
     @Published var selectedLanguage = TranscriptionLanguage.automatic
+    @Published var translationConfiguration: TranslationSession.Configuration?
+    @Published private(set) var isTranslating = false
 
     private let engine = AudioTranscriptionEngine()
     private let segmenter = TextSegmenter()
@@ -39,6 +42,8 @@ final class TranscriptionModel: ObservableObject {
     private var segmentationTask: Task<Void, Never>?
     private var audioDuration: TimeInterval?
     private var transcriptionDraft: TranscriptionDraft?
+    private var lastJSONSaveURL: URL?
+    private var pendingTranslation: PendingTranslation?
 
     var canOpen: Bool {
         state != .transcribing
@@ -56,6 +61,10 @@ final class TranscriptionModel: ObservableObject {
         canSave && state != .transcribing
     }
 
+    var canTranslate: Bool {
+        canSegment && !isTranslating
+    }
+
     func openFile() {
         guard canOpen else { return }
 
@@ -70,12 +79,14 @@ final class TranscriptionModel: ObservableObject {
         transcriptionTask?.cancel()
         audioHintTask?.cancel()
         segmentationTask?.cancel()
+        cancelPendingTranslation()
         selectedFileURL = url
         selectedAudioURL = nil
         transcriptionDraft = nil
         audioBoundaryHints = []
         audioDuration = nil
         sentenceSegments = []
+        lastJSONSaveURL = nil
 
         if isAudioFile(url) {
             selectedAudioURL = url
@@ -174,11 +185,91 @@ final class TranscriptionModel: ObservableObject {
 
             try transcriptText.write(to: destinationURL, atomically: true, encoding: .utf8)
             try writeSegmentRecords(records, to: jsonURL)
+            lastJSONSaveURL = jsonURL
             statusText = "Saved \(destinationURL.lastPathComponent) and \(jsonURL.lastPathComponent)"
         } catch {
             state = .failed
             statusText = error.localizedDescription
         }
+    }
+
+    func translateCurrentSegments() {
+        guard canTranslate else { return }
+
+        guard let pair = currentTranslationPair else {
+            statusText = "Translation is available for English and Chinese source text"
+            return
+        }
+
+        guard let jsonURL = existingSegmentJSONURL else {
+            statusText = "Save first to create a JSON file"
+            return
+        }
+
+        let records = segmentRecordsForCurrentText()
+        let requestCount = records.filter { $0.counterpartLanguageCode == pair.targetCode }.count
+        guard requestCount > 0 else {
+            statusText = "No blank \(pair.targetCode) fields to translate"
+            return
+        }
+
+        pendingTranslation = PendingTranslation(
+            records: records,
+            destinationURL: jsonURL,
+            sourceCode: pair.sourceCode,
+            targetCode: pair.targetCode
+        )
+        isTranslating = true
+        state = .completed
+        statusText = "Translating \(requestCount) segments..."
+        translationConfiguration = TranslationSession.Configuration(
+            source: pair.sourceLanguage,
+            target: pair.targetLanguage
+        )
+    }
+
+    func translatePendingSegments(using session: TranslationSession) async {
+        guard let pendingTranslation else { return }
+
+        do {
+            var updatedRecords = pendingTranslation.records
+            let requests: [TranslationSession.Request] = pendingTranslation.records.enumerated().compactMap { index, record in
+                guard record.counterpartLanguageCode == pendingTranslation.targetCode,
+                      let text = record.sourceTextForTranslation else {
+                    return nil
+                }
+
+                return TranslationSession.Request(
+                    sourceText: text,
+                    clientIdentifier: String(index)
+                )
+            }
+
+            try await session.prepareTranslation()
+            let responses = try await session.translations(from: requests)
+
+            for response in responses {
+                guard let identifier = response.clientIdentifier,
+                      let index = Int(identifier),
+                      updatedRecords.indices.contains(index) else {
+                    continue
+                }
+
+                updatedRecords[index] = updatedRecords[index].fillingCounterpart(
+                    with: response.targetText
+                )
+            }
+
+            try writeSegmentRecords(updatedRecords, to: pendingTranslation.destinationURL)
+            statusText = "Translated \(responses.count) segments into \(pendingTranslation.destinationURL.lastPathComponent)"
+        } catch is CancellationError {
+            statusText = "Translation cancelled"
+        } catch {
+            state = .failed
+            statusText = error.localizedDescription
+        }
+
+        cancelPendingTranslation()
     }
 
     private var defaultSaveName: String {
@@ -248,6 +339,51 @@ final class TranscriptionModel: ObservableObject {
         return "und"
     }
 
+    private var currentTranslationPair: TranslationPair? {
+        switch currentSourceLanguageCode {
+        case "en":
+            TranslationPair(sourceCode: "en", targetCode: "zh")
+        case "zh":
+            TranslationPair(sourceCode: "zh", targetCode: "en")
+        default:
+            nil
+        }
+    }
+
+    private var existingSegmentJSONURL: URL? {
+        let candidates = segmentJSONURLCandidates()
+        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    private func segmentJSONURLCandidates() -> [URL] {
+        var urls: [URL] = []
+
+        if let lastJSONSaveURL {
+            urls.append(lastJSONSaveURL)
+        }
+
+        if let selectedFileURL {
+            urls.append(selectedFileURL.deletingPathExtension().appendingPathExtension("json"))
+
+            let languageStemURL = selectedFileURL.deletingPathExtension()
+            if languageStemURL.pathExtension.normalizedLanguageCode != nil {
+                urls.append(languageStemURL.deletingPathExtension().appendingPathExtension("json"))
+            }
+        }
+
+        return urls.reduce(into: []) { uniqueURLs, url in
+            if !uniqueURLs.contains(url) {
+                uniqueURLs.append(url)
+            }
+        }
+    }
+
+    private func cancelPendingTranslation() {
+        pendingTranslation = nil
+        translationConfiguration = nil
+        isTranslating = false
+    }
+
     private func isAudioFile(_ url: URL) -> Bool {
         let resourceType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
         if resourceType?.conforms(to: .audio) == true {
@@ -306,6 +442,26 @@ final class TranscriptionModel: ObservableObject {
     }
 }
 
+private struct PendingTranslation {
+    let records: [TextSegmentValue]
+    let destinationURL: URL
+    let sourceCode: String
+    let targetCode: String
+}
+
+private struct TranslationPair {
+    let sourceCode: String
+    let targetCode: String
+
+    var sourceLanguage: Locale.Language {
+        Locale.Language(identifier: sourceCode)
+    }
+
+    var targetLanguage: Locale.Language {
+        Locale.Language(identifier: targetCode)
+    }
+}
+
 struct ContentView: View {
     @StateObject private var model = TranscriptionModel()
 
@@ -361,6 +517,11 @@ struct ContentView: View {
                 }
                 .disabled(!model.canSegment)
 
+                Button(action: model.translateCurrentSegments) {
+                    Label("Translate", systemImage: "translate")
+                }
+                .disabled(!model.canTranslate)
+
                 Spacer()
 
                 Button(action: model.saveTranscription) {
@@ -372,6 +533,9 @@ struct ContentView: View {
         }
         .padding(20)
         .frame(width: 640)
+        .translationTask(model.translationConfiguration) { session in
+            await model.translatePendingSegments(using: session)
+        }
     }
 
     private var statusChip: some View {

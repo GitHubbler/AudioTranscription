@@ -36,6 +36,45 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
             zhText = ""
         }
     }
+
+    init(sourceLang: String, enText: String, zhText: String) {
+        self.sourceLang = sourceLang
+        self.enText = enText
+        self.zhText = zhText
+    }
+
+    var counterpartLanguageCode: String? {
+        switch sourceLang {
+        case "en":
+            zhText.isEmpty ? "zh" : nil
+        case "zh":
+            enText.isEmpty ? "en" : nil
+        default:
+            nil
+        }
+    }
+
+    var sourceTextForTranslation: String? {
+        switch sourceLang {
+        case "en":
+            enText.isEmpty ? nil : enText
+        case "zh":
+            zhText.isEmpty ? nil : zhText
+        default:
+            nil
+        }
+    }
+
+    func fillingCounterpart(with translatedText: String) -> TextSegmentValue {
+        switch sourceLang {
+        case "en" where zhText.isEmpty:
+            TextSegmentValue(sourceLang: sourceLang, enText: enText, zhText: translatedText)
+        case "zh" where enText.isEmpty:
+            TextSegmentValue(sourceLang: sourceLang, enText: translatedText, zhText: zhText)
+        default:
+            self
+        }
+    }
 }
 
 struct TextSegmentationContext: Sendable {

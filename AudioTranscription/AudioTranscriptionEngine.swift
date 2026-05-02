@@ -18,6 +18,11 @@ struct TimedTranscriptionSegment: Sendable {
     }
 }
 
+struct TranscriptionDraft: Sendable {
+    let text: String
+    let timedSegments: [TimedTranscriptionSegment]
+}
+
 enum AudioTranscriptionError: LocalizedError {
     case speechRecognitionDenied
     case speechRecognitionRestricted
@@ -60,7 +65,7 @@ struct AudioTranscriptionEngine {
         fileURL: URL,
         language: TranscriptionLanguage,
         eventHandler: @escaping EventHandler
-    ) async throws -> String {
+    ) async throws -> TranscriptionDraft {
         try Task.checkCancellation()
         try await requestSpeechRecognitionAuthorization()
 
@@ -110,7 +115,7 @@ struct AudioTranscriptionEngine {
         fileURL: URL,
         language: TranscriptionLanguage,
         eventHandler: @escaping EventHandler
-    ) async throws -> String {
+    ) async throws -> TranscriptionDraft {
         guard SpeechTranscriber.isAvailable else {
             throw AudioTranscriptionError.speechTranscriberUnavailable
         }
@@ -151,7 +156,7 @@ struct AudioTranscriptionEngine {
         fileURL: URL,
         locale: Locale,
         eventHandler: @escaping EventHandler
-    ) async throws -> String {
+    ) async throws -> TranscriptionDraft {
         await eventHandler(.status("Trying \(displayName(for: locale))..."))
 
         let transcriber = SpeechTranscriber(locale: locale, preset: .timeIndexedProgressiveTranscription)
@@ -173,10 +178,10 @@ struct AudioTranscriptionEngine {
         do {
             _ = try await analyzer.analyzeSequence(from: audioFile)
             try await analyzer.finalizeAndFinishThroughEndOfInput()
-            let finalText = try await resultsTask.value
-            guard !finalText.isEmpty else { throw AudioTranscriptionError.emptyTranscription }
+            let draft = try await resultsTask.value
+            guard !draft.text.isEmpty else { throw AudioTranscriptionError.emptyTranscription }
             await eventHandler(.status("Detected \(displayName(for: locale))"))
-            return finalText
+            return draft
         } catch {
             resultsTask.cancel()
             throw error
@@ -211,7 +216,7 @@ struct AudioTranscriptionEngine {
     private func collectModernResults(
         from transcriber: SpeechTranscriber,
         eventHandler: EventHandler
-    ) async throws -> String {
+    ) async throws -> TranscriptionDraft {
         var finalizedSegments: [TimedTranscriptionSegment] = []
         var volatileSegment: TimedTranscriptionSegment?
 
@@ -231,14 +236,17 @@ struct AudioTranscriptionEngine {
             await eventHandler(.transcript(renderText(finalizedSegments, volatileSegment: volatileSegment)))
         }
 
-        return renderText(finalizedSegments, volatileSegment: nil)
+        return TranscriptionDraft(
+            text: renderText(finalizedSegments, volatileSegment: nil),
+            timedSegments: finalizedSegments
+        )
     }
 
     private func transcribeWithSFSpeechRecognizer(
         fileURL: URL,
         language: TranscriptionLanguage,
         eventHandler: @escaping EventHandler
-    ) async throws -> String {
+    ) async throws -> TranscriptionDraft {
         let candidates = legacyLocaleCandidates(for: language)
         guard !candidates.isEmpty else {
             throw AudioTranscriptionError.unsupportedLocale
@@ -270,7 +278,7 @@ struct AudioTranscriptionEngine {
         fileURL: URL,
         locale: Locale,
         eventHandler: @escaping EventHandler
-    ) async throws -> String {
+    ) async throws -> TranscriptionDraft {
         guard let recognizer = SFSpeechRecognizer(locale: locale),
               recognizer.isAvailable
         else {
@@ -288,10 +296,10 @@ struct AudioTranscriptionEngine {
 
         return try await withCheckedThrowingContinuation { continuation in
             var didResume = false
-            var latestText = ""
+            var latestDraft = TranscriptionDraft(text: "", timedSegments: [])
             var recognitionTask: SFSpeechRecognitionTask?
 
-            func finish(_ result: Result<String, Error>) {
+            func finish(_ result: Result<TranscriptionDraft, Error>) {
                 guard !didResume else { return }
                 didResume = true
                 if case .failure = result {
@@ -300,15 +308,18 @@ struct AudioTranscriptionEngine {
                 recognitionTask = nil
 
                 switch result {
-                case .success(let text):
-                    let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                case .success(let draft):
+                    let trimmedText = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
                     if trimmedText.isEmpty {
                         continuation.resume(throwing: AudioTranscriptionError.emptyTranscription)
                     } else {
                         Task {
                             await eventHandler(.status("Detected \(displayName(for: locale))"))
                         }
-                        continuation.resume(returning: trimmedText)
+                        continuation.resume(returning: TranscriptionDraft(
+                            text: trimmedText,
+                            timedSegments: draft.timedSegments
+                        ))
                     }
                 case .failure(let error):
                     continuation.resume(throwing: error)
@@ -317,13 +328,13 @@ struct AudioTranscriptionEngine {
 
             recognitionTask = recognizer.recognitionTask(with: request) { result, error in
                 if let result {
-                    latestText = result.bestTranscription.formattedString
+                    latestDraft = TranscriptionDraft(result: result)
                     Task {
-                        await eventHandler(.transcript(latestText))
+                        await eventHandler(.transcript(latestDraft.text))
                     }
 
                     if result.isFinal {
-                        finish(.success(latestText))
+                        finish(.success(latestDraft))
                     }
                 }
 
@@ -453,7 +464,7 @@ struct AudioTranscriptionEngine {
         return segments
             .sorted { $0.start < $1.start }
             .map(\.text)
-            .joined(separator: "\n")
+            .joined(separator: " ")
     }
 }
 
@@ -471,5 +482,20 @@ private extension CMTime {
     var safeSeconds: TimeInterval {
         guard isValid, seconds.isFinite else { return 0 }
         return seconds
+    }
+}
+
+private extension TranscriptionDraft {
+    init(result: SFSpeechRecognitionResult) {
+        text = result.bestTranscription.formattedString
+        timedSegments = result.bestTranscription.segments.map { TimedTranscriptionSegment(segment: $0) }
+    }
+}
+
+private extension TimedTranscriptionSegment {
+    init(segment: SFTranscriptionSegment) {
+        start = segment.timestamp
+        duration = segment.duration
+        text = segment.substring.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

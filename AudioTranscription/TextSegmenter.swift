@@ -6,15 +6,30 @@ struct TextSegment: Identifiable, Equatable, Sendable {
     let sourceRange: Range<String.Index>?
 }
 
+struct TextSegmentationContext: Sendable {
+    var timedSegments: [TimedTranscriptionSegment]
+    var audioBoundaryHints: [AudioBoundaryHint]
+    var audioDuration: TimeInterval?
+
+    static let empty = TextSegmentationContext(
+        timedSegments: [],
+        audioBoundaryHints: [],
+        audioDuration: nil
+    )
+}
+
 struct TextSegmenter {
-    func sentenceSegments(from text: String) -> [TextSegment] {
+    func sentenceSegments(
+        from text: String,
+        context: TextSegmentationContext = .empty
+    ) -> [TextSegment] {
         var segments: [TextSegment] = []
 
         for block in textBlocks(from: text) {
             let sentences = sentenceRanges(in: text, range: block).flatMap { sentence in
                 supplementalSentenceRanges(in: text, range: sentence)
             }.flatMap { sentence in
-                chinesePhraseBoundaryRanges(in: text, range: sentence)
+                chinesePhraseBoundaryRanges(in: text, range: sentence, context: context)
             }
 
             if sentences.isEmpty {
@@ -107,17 +122,194 @@ struct TextSegmenter {
 
     private func chinesePhraseBoundaryRanges(
         in text: String,
-        range: Range<String.Index>
+        range: Range<String.Index>,
+        context: TextSegmentationContext
     ) -> [Range<String.Index>] {
         let candidate = String(text[range])
         guard containsCJK(candidate) else { return [range] }
         guard supplementalTerminatorCount(in: candidate) <= 1 else { return [range] }
 
         var boundaries = Set<String.Index>()
+        addAudioHintBoundaries(in: text, range: range, context: context, to: &boundaries)
         addChineseTopicBoundaries(in: text, range: range, to: &boundaries)
         addChineseListToStatisticBoundaries(in: text, range: range, to: &boundaries)
 
         return rangesBySplitting(range, at: boundaries)
+    }
+
+    private func addAudioHintBoundaries(
+        in text: String,
+        range: Range<String.Index>,
+        context: TextSegmentationContext,
+        to boundaries: inout Set<String.Index>
+    ) {
+        guard let audioDuration = context.audioDuration, audioDuration > 0 else { return }
+        guard !context.audioBoundaryHints.isEmpty else { return }
+
+        for hint in context.audioBoundaryHints where hint.midpoint > 0 && hint.midpoint < audioDuration {
+            guard let approximateOffset = approximateCharacterOffset(
+                for: hint,
+                audioDuration: audioDuration,
+                context: context,
+                textRange: range,
+                in: text
+            ) else {
+                continue
+            }
+
+            let boundary = snappedBoundary(
+                nearCharacterOffset: approximateOffset,
+                in: text,
+                range: range,
+                allowApproximateCJKBoundary: hint.confidence >= 0.45 || hint.duration >= 0.24
+            )
+
+            if let boundary {
+                boundaries.insert(boundary)
+            }
+        }
+    }
+
+    private func approximateCharacterOffset(
+        for hint: AudioBoundaryHint,
+        audioDuration: TimeInterval,
+        context: TextSegmentationContext,
+        textRange: Range<String.Index>,
+        in text: String
+    ) -> Int? {
+        let rangeLength = text.distance(from: textRange.lowerBound, to: textRange.upperBound)
+        guard rangeLength > 0 else { return nil }
+
+        if let timedOffset = approximateOffsetFromTimedSegments(for: hint, context: context, rangeLength: rangeLength) {
+            return timedOffset
+        }
+
+        let ratio = min(1, max(0, hint.midpoint / audioDuration))
+        return Int((Double(rangeLength) * ratio).rounded())
+    }
+
+    private func approximateOffsetFromTimedSegments(
+        for hint: AudioBoundaryHint,
+        context: TextSegmentationContext,
+        rangeLength: Int
+    ) -> Int? {
+        let segments = context.timedSegments
+            .filter { !$0.text.isEmpty }
+            .sorted { $0.start < $1.start }
+        guard !segments.isEmpty else { return nil }
+
+        let originalLength = segments.reduce(0) { length, segment in
+            length + segment.text.count + 1
+        }
+        guard originalLength > 0 else { return nil }
+
+        let boundaryTime = hint.midpoint
+        var charactersBeforeBoundary = 0
+        var foundFollowingSegment = false
+        for segment in segments {
+            if segment.start >= boundaryTime {
+                foundFollowingSegment = true
+                break
+            }
+            charactersBeforeBoundary += segment.text.count + 1
+        }
+        guard foundFollowingSegment else { return nil }
+
+        let ratio = min(1, max(0, Double(charactersBeforeBoundary) / Double(originalLength)))
+        return Int((Double(rangeLength) * ratio).rounded())
+    }
+
+    private func snappedBoundary(
+        nearCharacterOffset offset: Int,
+        in text: String,
+        range: Range<String.Index>,
+        allowApproximateCJKBoundary: Bool
+    ) -> String.Index? {
+        let rangeLength = text.distance(from: range.lowerBound, to: range.upperBound)
+        guard rangeLength >= 8 else { return nil }
+
+        let clampedOffset = min(max(offset, 1), rangeLength - 1)
+        let approximateIndex = text.index(range.lowerBound, offsetBy: clampedOffset)
+        let maxDistance = max(4, min(16, rangeLength / 5))
+
+        let candidates = boundaryCandidates(in: text, range: range)
+            .map { candidate in
+                (index: candidate, distance: abs(text.distance(from: approximateIndex, to: candidate)))
+            }
+            .filter { $0.distance <= maxDistance }
+            .sorted { lhs, rhs in
+                if lhs.distance == rhs.distance {
+                    return lhs.index < rhs.index
+                }
+                return lhs.distance < rhs.distance
+            }
+
+        if let candidate = candidates.first?.index,
+           isReasonableSplit(candidate, in: text, range: range) {
+            return candidate
+        }
+
+        guard allowApproximateCJKBoundary else { return nil }
+        guard isReasonableSplit(approximateIndex, in: text, range: range) else { return nil }
+        guard !isInsideProtectedToken(approximateIndex, in: text, range: range) else { return nil }
+        return approximateIndex
+    }
+
+    private func boundaryCandidates(in text: String, range: Range<String.Index>) -> [String.Index] {
+        var candidates = Set<String.Index>()
+        var currentIndex = range.lowerBound
+
+        while currentIndex < range.upperBound {
+            let character = text[currentIndex]
+            let nextIndex = text.index(after: currentIndex)
+
+            if character.isWhitespace {
+                candidates.insert(currentIndex)
+                if nextIndex < range.upperBound {
+                    candidates.insert(nextIndex)
+                }
+            }
+
+            if isSupplementalSentenceTerminator(character) {
+                candidates.insert(nextIndex)
+            }
+
+            currentIndex = nextIndex
+        }
+
+        addChineseTopicBoundaries(in: text, range: range, to: &candidates)
+        addChineseListToStatisticBoundaries(in: text, range: range, to: &candidates)
+        return Array(candidates)
+    }
+
+    private func isReasonableSplit(
+        _ index: String.Index,
+        in text: String,
+        range: Range<String.Index>
+    ) -> Bool {
+        let before = text.distance(from: range.lowerBound, to: index)
+        let after = text.distance(from: index, to: range.upperBound)
+        return before >= 4 && after >= 4
+    }
+
+    private func isInsideProtectedToken(
+        _ index: String.Index,
+        in text: String,
+        range: Range<String.Index>
+    ) -> Bool {
+        guard index > range.lowerBound, index < range.upperBound else { return false }
+        let previous = text[text.index(before: index)]
+        let next = text[index]
+
+        if previous.isNumber && next.isNumber {
+            return true
+        }
+
+        if (previous.isLetter || previous.isNumber) && (next.isLetter || next.isNumber) {
+            return true
+        }
+
+        return previous == "." || next == "."
     }
 
     private func addChineseTopicBoundaries(

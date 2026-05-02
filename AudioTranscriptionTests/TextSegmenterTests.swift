@@ -44,4 +44,24 @@ final class TextSegmenterTests: XCTestCase {
             "本期展会还将推出超过 150场新品首发活动。"
         ])
     }
+
+    func testAudioHintsCanSplitSparseChineseDraftAtPauses() {
+        let text = "第一段内容 第二段内容 第三段内容。"
+        let context = TextSegmentationContext(
+            timedSegments: [],
+            audioBoundaryHints: [
+                AudioBoundaryHint(time: 2.9, duration: 0.25, confidence: 0.7),
+                AudioBoundaryHint(time: 5.9, duration: 0.25, confidence: 0.7)
+            ],
+            audioDuration: 9
+        )
+
+        let segments = TextSegmenter().sentenceSegments(from: text, context: context)
+
+        XCTAssertEqual(segments.map(\.text), [
+            "第一段内容",
+            "第二段内容",
+            "第三段内容。"
+        ])
+    }
 }

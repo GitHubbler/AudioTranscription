@@ -23,33 +23,44 @@ final class TranscriptionModel: ObservableObject {
     }
 
     @Published var state: State = .idle
-    @Published var statusText = "Choose an audio file"
+    @Published var statusText = "Choose audio or text"
     @Published var transcriptText = ""
     @Published private(set) var sentenceSegments: [TextSegment] = []
     @Published var selectedFileURL: URL?
+    @Published private(set) var selectedAudioURL: URL?
+    @Published private(set) var audioBoundaryHints: [AudioBoundaryHint] = []
     @Published var selectedLanguage = TranscriptionLanguage.automatic
 
     private let engine = AudioTranscriptionEngine()
     private let segmenter = TextSegmenter()
+    private let audioHintExtractor = AudioBoundaryHintExtractor()
     private var transcriptionTask: Task<Void, Never>?
+    private var audioHintTask: Task<Void, Never>?
+    private var segmentationTask: Task<Void, Never>?
+    private var audioDuration: TimeInterval?
+    private var transcriptionDraft: TranscriptionDraft?
 
     var canOpen: Bool {
         state != .transcribing
     }
 
     var canStart: Bool {
-        selectedFileURL != nil && state != .transcribing
+        selectedAudioURL != nil && state != .transcribing
     }
 
     var canSave: Bool {
         !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    var canSegment: Bool {
+        canSave && state != .transcribing
+    }
+
     func openFile() {
         guard canOpen else { return }
 
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.audio]
+        panel.allowedContentTypes = [.audio, .plainText]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
@@ -57,35 +68,59 @@ final class TranscriptionModel: ObservableObject {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         transcriptionTask?.cancel()
+        audioHintTask?.cancel()
+        segmentationTask?.cancel()
         selectedFileURL = url
-        setTranscriptText("")
-        state = .fileSelected
-        statusText = "Ready: \(url.lastPathComponent)"
+        selectedAudioURL = nil
+        transcriptionDraft = nil
+        audioBoundaryHints = []
+        audioDuration = nil
+        sentenceSegments = []
+
+        if isAudioFile(url) {
+            selectedAudioURL = url
+            setDraftText("")
+            state = .fileSelected
+            statusText = "Ready: \(url.lastPathComponent)"
+            startAudioHintExtraction(for: url)
+        } else {
+            do {
+                let text = try String(contentsOf: url, encoding: .utf8)
+                setDraftText(text)
+                state = .completed
+                statusText = "Loaded text: \(url.lastPathComponent)"
+            } catch {
+                state = .failed
+                statusText = error.localizedDescription
+            }
+        }
     }
 
     func startTranscription() {
-        guard canStart, let fileURL = selectedFileURL else { return }
+        guard canStart, let fileURL = selectedAudioURL else { return }
 
         transcriptionTask?.cancel()
-        setTranscriptText("")
+        setDraftText("")
+        transcriptionDraft = nil
         state = .transcribing
         statusText = "Preparing transcription..."
 
         transcriptionTask = Task {
             do {
                 let language = selectedLanguage
-                let finalText = try await engine.transcribe(fileURL: fileURL, language: language) { [weak self] event in
+                let draft = try await engine.transcribe(fileURL: fileURL, language: language) { [weak self] event in
                     await self?.handle(event)
                 }
 
                 await MainActor.run {
-                    self.setTranscriptText(finalText)
+                    self.transcriptionDraft = draft
+                    self.setDraftText(draft.text)
                     self.state = .completed
-                    self.statusText = "Transcription complete: \(self.sentenceSegments.count) sentences"
+                    self.statusText = self.draftReadyStatus
                 }
             } catch is CancellationError {
                 await MainActor.run {
-                    self.state = self.selectedFileURL == nil ? .idle : .fileSelected
+                    self.state = self.selectedAudioURL == nil ? .idle : .fileSelected
                     self.statusText = "Transcription cancelled"
                 }
             } catch {
@@ -98,8 +133,20 @@ final class TranscriptionModel: ObservableObject {
     }
 
     func segmentCurrentText() {
-        setTranscriptText(transcriptText)
-        statusText = "Segmented \(sentenceSegments.count) sentences"
+        guard canSegment else { return }
+
+        segmentationTask?.cancel()
+        let text = transcriptText
+        statusText = selectedAudioURL == nil ? "Segmenting text..." : "Segmenting with audio hints..."
+
+        segmentationTask = Task { [weak self] in
+            guard let self else { return }
+            await self.ensureAudioHintsIfNeeded()
+            await MainActor.run {
+                self.applySegmentedText(text)
+                self.statusText = "Segmented \(self.sentenceSegments.count) sentences\(self.audioHintSummary)"
+            }
+        }
     }
 
     private func handle(_ event: TranscriptionEvent) {
@@ -107,13 +154,12 @@ final class TranscriptionModel: ObservableObject {
         case .status(let message):
             statusText = message
         case .transcript(let text):
-            setTranscriptText(text)
+            setDraftText(text)
         }
     }
 
     func saveTranscription() {
         guard canSave else { return }
-        setTranscriptText(transcriptText)
 
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
@@ -136,9 +182,87 @@ final class TranscriptionModel: ObservableObject {
         return selectedFileURL.deletingPathExtension().lastPathComponent + ".txt"
     }
 
-    private func setTranscriptText(_ text: String) {
-        sentenceSegments = segmenter.sentenceSegments(from: text)
+    private var draftReadyStatus: String {
+        "Transcription draft ready\(audioHintSummary)"
+    }
+
+    private var audioHintSummary: String {
+        audioBoundaryHints.isEmpty ? "" : " (\(audioBoundaryHints.count) audio hints)"
+    }
+
+    private var segmentationContext: TextSegmentationContext {
+        TextSegmentationContext(
+            timedSegments: transcriptionDraft?.timedSegments ?? [],
+            audioBoundaryHints: audioBoundaryHints,
+            audioDuration: audioDuration
+        )
+    }
+
+    private func setDraftText(_ text: String) {
+        transcriptText = text
+        sentenceSegments = []
+    }
+
+    private func applySegmentedText(_ text: String) {
+        sentenceSegments = segmenter.sentenceSegments(from: text, context: segmentationContext)
         transcriptText = segmenter.renderSentenceList(sentenceSegments)
+    }
+
+    private func isAudioFile(_ url: URL) -> Bool {
+        let resourceType = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType
+        if resourceType?.conforms(to: .audio) == true {
+            return true
+        }
+
+        return UTType(filenameExtension: url.pathExtension)?.conforms(to: .audio) == true
+    }
+
+    private func startAudioHintExtraction(for url: URL) {
+        audioHintTask?.cancel()
+        audioHintTask = Task { [weak self] in
+            guard let self else { return }
+            await self.extractAudioHints(for: url, shouldUpdateStatus: true)
+        }
+    }
+
+    private func ensureAudioHintsIfNeeded() async {
+        if let audioHintTask {
+            await audioHintTask.value
+            return
+        }
+
+        guard let selectedAudioURL, audioDuration == nil else { return }
+        await extractAudioHints(for: selectedAudioURL, shouldUpdateStatus: false)
+    }
+
+    private func extractAudioHints(for url: URL, shouldUpdateStatus: Bool) async {
+        do {
+            let extractor = audioHintExtractor
+            let analysis = try await Task.detached(priority: .userInitiated) {
+                try extractor.analyze(fileURL: url)
+            }.value
+
+            guard selectedAudioURL == url else { return }
+            audioDuration = analysis.duration
+            audioBoundaryHints = analysis.hints
+            audioHintTask = nil
+
+            if shouldUpdateStatus, state != .transcribing {
+                statusText = state == .completed && !transcriptText.isEmpty
+                    ? draftReadyStatus
+                    : "Ready: \(url.lastPathComponent)\(audioHintSummary)"
+            }
+        } catch is CancellationError {
+            audioHintTask = nil
+        } catch {
+            guard selectedAudioURL == url else { return }
+            audioHintTask = nil
+            audioDuration = nil
+            audioBoundaryHints = []
+            if shouldUpdateStatus, state != .transcribing {
+                statusText = "Ready: \(url.lastPathComponent) (audio hints unavailable)"
+            }
+        }
     }
 }
 
@@ -195,7 +319,7 @@ struct ContentView: View {
                 Button(action: model.segmentCurrentText) {
                     Label("Segment", systemImage: "text.line.first.and.arrowtriangle.forward")
                 }
-                .disabled(!model.canSave || !model.canOpen)
+                .disabled(!model.canSegment)
 
                 Spacer()
 

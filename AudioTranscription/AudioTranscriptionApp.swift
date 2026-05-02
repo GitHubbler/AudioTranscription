@@ -23,9 +23,18 @@ final class TranscriptionModel: ObservableObject {
         case failed
     }
 
+    enum EditorMode: String, CaseIterable, Identifiable {
+        case text = "Text"
+        case json = "JSON"
+
+        var id: String { rawValue }
+    }
+
     @Published var state: State = .idle
     @Published var statusText = "Choose audio or text"
     @Published var transcriptText = ""
+    @Published var jsonText = ""
+    @Published var editorMode = EditorMode.text
     @Published private(set) var sentenceSegments: [TextSegment] = []
     @Published var selectedFileURL: URL?
     @Published private(set) var selectedAudioURL: URL?
@@ -54,15 +63,24 @@ final class TranscriptionModel: ObservableObject {
     }
 
     var canSave: Bool {
-        !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        switch editorMode {
+        case .text:
+            !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .json:
+            !jsonText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
     }
 
     var canSegment: Bool {
-        canSave && state != .transcribing
+        !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && state != .transcribing
+            && editorMode == .text
     }
 
     var canTranslate: Bool {
-        canSegment && !isTranslating
+        !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && state != .transcribing
+            && !isTranslating
     }
 
     func openFile() {
@@ -86,6 +104,8 @@ final class TranscriptionModel: ObservableObject {
         audioBoundaryHints = []
         audioDuration = nil
         sentenceSegments = []
+        jsonText = ""
+        editorMode = .text
         lastJSONSaveURL = nil
 
         if isAudioFile(url) {
@@ -172,6 +192,17 @@ final class TranscriptionModel: ObservableObject {
     func saveTranscription() {
         guard canSave else { return }
 
+        switch editorMode {
+        case .text:
+            saveTextDraft()
+        case .json:
+            saveJSONDraft()
+        }
+    }
+
+    private func saveTextDraft() {
+        guard canSave else { return }
+
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
         panel.canCreateDirectories = true
@@ -185,8 +216,30 @@ final class TranscriptionModel: ObservableObject {
 
             try transcriptText.write(to: destinationURL, atomically: true, encoding: .utf8)
             try writeSegmentRecords(records, to: jsonURL)
+            jsonText = try renderSegmentRecords(records)
             lastJSONSaveURL = jsonURL
             statusText = "Saved \(destinationURL.lastPathComponent) and \(jsonURL.lastPathComponent)"
+        } catch {
+            state = .failed
+            statusText = error.localizedDescription
+        }
+    }
+
+    private func saveJSONDraft() {
+        guard canSave else { return }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = defaultJSONSaveName
+
+        guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
+
+        do {
+            try validateSegmentJSON(jsonText)
+            try jsonText.write(to: destinationURL, atomically: true, encoding: .utf8)
+            lastJSONSaveURL = destinationURL
+            statusText = "Saved \(destinationURL.lastPathComponent)"
         } catch {
             state = .failed
             statusText = error.localizedDescription
@@ -201,11 +254,6 @@ final class TranscriptionModel: ObservableObject {
             return
         }
 
-        guard let jsonURL = existingSegmentJSONURL else {
-            statusText = "Save first to create a JSON file"
-            return
-        }
-
         let records = segmentRecordsForCurrentText()
         let requestCount = records.filter { $0.counterpartLanguageCode == pair.targetCode }.count
         guard requestCount > 0 else {
@@ -215,7 +263,6 @@ final class TranscriptionModel: ObservableObject {
 
         pendingTranslation = PendingTranslation(
             records: records,
-            destinationURL: jsonURL,
             sourceCode: pair.sourceCode,
             targetCode: pair.targetCode
         )
@@ -260,8 +307,9 @@ final class TranscriptionModel: ObservableObject {
                 )
             }
 
-            try writeSegmentRecords(updatedRecords, to: pendingTranslation.destinationURL)
-            statusText = "Translated \(responses.count) segments into \(pendingTranslation.destinationURL.lastPathComponent)"
+            jsonText = try renderSegmentRecords(updatedRecords)
+            editorMode = .json
+            statusText = "Translated \(responses.count) segments into editable JSON"
         } catch is CancellationError {
             statusText = "Translation cancelled"
         } catch {
@@ -275,6 +323,15 @@ final class TranscriptionModel: ObservableObject {
     private var defaultSaveName: String {
         guard let selectedFileURL else { return "Transcription.txt" }
         return selectedFileURL.deletingPathExtension().lastPathComponent + ".txt"
+    }
+
+    private var defaultJSONSaveName: String {
+        if let lastJSONSaveURL {
+            return lastJSONSaveURL.lastPathComponent
+        }
+
+        guard let selectedFileURL else { return "Transcription.json" }
+        return selectedFileURL.deletingPathExtension().lastPathComponent + ".json"
     }
 
     private var draftReadyStatus: String {
@@ -296,11 +353,13 @@ final class TranscriptionModel: ObservableObject {
     private func setDraftText(_ text: String) {
         transcriptText = text
         sentenceSegments = []
+        editorMode = .text
     }
 
     private func applySegmentedText(_ text: String) {
         sentenceSegments = localizedSegments(from: text)
         transcriptText = segmenter.renderSentenceList(sentenceSegments)
+        editorMode = .text
     }
 
     private func localizedSegments(from text: String) -> [TextSegment] {
@@ -315,10 +374,28 @@ final class TranscriptionModel: ObservableObject {
     }
 
     private func writeSegmentRecords(_ records: [TextSegmentValue], to url: URL) throws {
+        let data = try encodedSegmentRecords(records)
+        try data.write(to: url, options: .atomic)
+    }
+
+    private func renderSegmentRecords(_ records: [TextSegmentValue]) throws -> String {
+        let data = try encodedSegmentRecords(records)
+        guard let text = String(data: data, encoding: .utf8) else {
+            throw CocoaError(.fileWriteInapplicableStringEncoding)
+        }
+
+        return text
+    }
+
+    private func encodedSegmentRecords(_ records: [TextSegmentValue]) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        let data = try encoder.encode(records)
-        try data.write(to: url, options: .atomic)
+        return try encoder.encode(records)
+    }
+
+    private func validateSegmentJSON(_ text: String) throws {
+        let data = Data(text.utf8)
+        _ = try JSONDecoder().decode([TextSegmentValue].self, from: data)
     }
 
     private var currentSourceLanguageCode: String {
@@ -347,34 +424,6 @@ final class TranscriptionModel: ObservableObject {
             TranslationPair(sourceCode: "zh", targetCode: "en")
         default:
             nil
-        }
-    }
-
-    private var existingSegmentJSONURL: URL? {
-        let candidates = segmentJSONURLCandidates()
-        return candidates.first { FileManager.default.fileExists(atPath: $0.path) }
-    }
-
-    private func segmentJSONURLCandidates() -> [URL] {
-        var urls: [URL] = []
-
-        if let lastJSONSaveURL {
-            urls.append(lastJSONSaveURL)
-        }
-
-        if let selectedFileURL {
-            urls.append(selectedFileURL.deletingPathExtension().appendingPathExtension("json"))
-
-            let languageStemURL = selectedFileURL.deletingPathExtension()
-            if languageStemURL.pathExtension.normalizedLanguageCode != nil {
-                urls.append(languageStemURL.deletingPathExtension().appendingPathExtension("json"))
-            }
-        }
-
-        return urls.reduce(into: []) { uniqueURLs, url in
-            if !uniqueURLs.contains(url) {
-                uniqueURLs.append(url)
-            }
         }
     }
 
@@ -444,7 +493,6 @@ final class TranscriptionModel: ObservableObject {
 
 private struct PendingTranslation {
     let records: [TextSegmentValue]
-    let destinationURL: URL
     let sourceCode: String
     let targetCode: String
 }
@@ -491,7 +539,15 @@ struct ContentView: View {
             .pickerStyle(.menu)
             .disabled(!model.canOpen)
 
-            TextEditor(text: $model.transcriptText)
+            Picker("Editor", selection: $model.editorMode) {
+                ForEach(TranscriptionModel.EditorMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(model.state == .transcribing)
+
+            TextEditor(text: editorTextBinding)
                 .font(.system(.body, design: .monospaced))
                 .frame(height: 260)
                 .overlay {
@@ -536,6 +592,27 @@ struct ContentView: View {
         .translationTask(model.translationConfiguration) { session in
             await model.translatePendingSegments(using: session)
         }
+    }
+
+    private var editorTextBinding: Binding<String> {
+        Binding(
+            get: {
+                switch model.editorMode {
+                case .text:
+                    model.transcriptText
+                case .json:
+                    model.jsonText
+                }
+            },
+            set: { newValue in
+                switch model.editorMode {
+                case .text:
+                    model.transcriptText = newValue
+                case .json:
+                    model.jsonText = newValue
+                }
+            }
+        )
     }
 
     private var statusChip: some View {

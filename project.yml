@@ -32,3 +32,15 @@ targets:
         DEVELOPMENT_TEAM: 6DM4EE4S8F
         CODE_SIGN_IDENTITY: "Apple Development"
         PROVISIONING_PROFILE_SPECIFIER: ""
+
+  AudioTranscriptionTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: AudioTranscriptionTests
+    dependencies:
+      - target: AudioTranscription
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.AudioTranscriptionTests

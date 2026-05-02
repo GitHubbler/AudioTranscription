@@ -187,7 +187,7 @@ struct ContentView: View {
                 .keyboardShortcut("o")
 
                 Button(action: model.startTranscription) {
-                    Label("Start", systemImage: "text.badge.play")
+                    Label("Start", systemImage: "play.fill")
                 }
                 .disabled(!model.canStart)
                 .keyboardShortcut(.return)

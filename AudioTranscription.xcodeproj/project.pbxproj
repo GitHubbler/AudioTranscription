@@ -9,20 +9,41 @@
 /* Begin PBXBuildFile section */
 		2F412F196790D3C79B6815E6 /* TranscriptionLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */; };
 		4A53F123591C54227170617A /* TextSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335D90992AED84DD03E885F4 /* TextSegmenter.swift */; };
+		BB092F79CDB66CCC4BE08AEF /* TextSegmenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71321F0C2695195E704EB3B3 /* TextSegmenterTests.swift */; };
 		C4C6479D3CB7D43D93E4C5F3 /* AudioTranscriptionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0A1ED36ADC537E6FE1C77E /* AudioTranscriptionApp.swift */; };
 		E3F3C3F5B25BC63C4F634244 /* AudioTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F0117065851950DC779C22 /* AudioTranscriptionEngine.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		16B8072CAB2596D07AC24585 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3CB87A0C5476E6B7A314C9B7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F599ED8AD68C4FE11B22456E;
+			remoteInfo = AudioTranscription;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		335D90992AED84DD03E885F4 /* TextSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSegmenter.swift; sourceTree = "<group>"; };
 		3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionLanguage.swift; sourceTree = "<group>"; };
+		71321F0C2695195E704EB3B3 /* TextSegmenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSegmenterTests.swift; sourceTree = "<group>"; };
 		7E24F2E30C36CFC02AC11C70 /* AudioTranscription.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AudioTranscription.entitlements; sourceTree = "<group>"; };
 		8D0A1ED36ADC537E6FE1C77E /* AudioTranscriptionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranscriptionApp.swift; sourceTree = "<group>"; };
 		F4F0117065851950DC779C22 /* AudioTranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranscriptionEngine.swift; sourceTree = "<group>"; };
+		F76EB67F2C3CE5CEAF606013 /* AudioTranscriptionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AudioTranscriptionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FB48642F7072161A705EB9DE /* AudioTranscription.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioTranscription.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		8B5FD44B85AC34ACD04EB31E /* AudioTranscriptionTests */ = {
+			isa = PBXGroup;
+			children = (
+				71321F0C2695195E704EB3B3 /* TextSegmenterTests.swift */,
+			);
+			path = AudioTranscriptionTests;
+			sourceTree = "<group>";
+		};
 		A3474AA9DAB75C81E2EB97B7 /* AudioTranscription */ = {
 			isa = PBXGroup;
 			children = (
@@ -39,6 +60,7 @@
 			isa = PBXGroup;
 			children = (
 				A3474AA9DAB75C81E2EB97B7 /* AudioTranscription */,
+				8B5FD44B85AC34ACD04EB31E /* AudioTranscriptionTests */,
 				F29BB359668253E43ABB7676 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -47,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				FB48642F7072161A705EB9DE /* AudioTranscription.app */,
+				F76EB67F2C3CE5CEAF606013 /* AudioTranscriptionTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -54,6 +77,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		935AE324FD561C025CE35C27 /* AudioTranscriptionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EE6C0B13E91E50DF942A5435 /* Build configuration list for PBXNativeTarget "AudioTranscriptionTests" */;
+			buildPhases = (
+				2EB4C6C264BD1558EBCE19EE /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A1497F72BFC753824D280D58 /* PBXTargetDependency */,
+			);
+			name = AudioTranscriptionTests;
+			packageProductDependencies = (
+			);
+			productName = AudioTranscriptionTests;
+			productReference = F76EB67F2C3CE5CEAF606013 /* AudioTranscriptionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		F599ED8AD68C4FE11B22456E /* AudioTranscription */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 27FBE3B567649DE075F03AE8 /* Build configuration list for PBXNativeTarget "AudioTranscription" */;
@@ -80,6 +121,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					935AE324FD561C025CE35C27 = {
+						ProvisioningStyle = Automatic;
+					};
 					F599ED8AD68C4FE11B22456E = {
 						DevelopmentTeam = 6DM4EE4S8F;
 						ProvisioningStyle = Automatic;
@@ -101,11 +145,20 @@
 			projectRoot = "";
 			targets = (
 				F599ED8AD68C4FE11B22456E /* AudioTranscription */,
+				935AE324FD561C025CE35C27 /* AudioTranscriptionTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2EB4C6C264BD1558EBCE19EE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB092F79CDB66CCC4BE08AEF /* TextSegmenterTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		44D7E5614F1A2E20D5EB30CB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -118,6 +171,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1497F72BFC753824D280D58 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F599ED8AD68C4FE11B22456E /* AudioTranscription */;
+			targetProxy = 16B8072CAB2596D07AC24585 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		2255C7552E4D8710D0BEF7D2 /* Release */ = {
@@ -177,6 +238,40 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		2565B7220304DCB473E9FC1A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.AudioTranscriptionTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AudioTranscription.app/Contents/MacOS/AudioTranscription";
+			};
+			name = Debug;
+		};
+		4CBFCF77CBB58EEBD5DB7A41 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.AudioTranscriptionTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AudioTranscription.app/Contents/MacOS/AudioTranscription";
 			};
 			name = Release;
 		};
@@ -308,6 +403,15 @@
 			buildConfigurations = (
 				9564176F32DFC80E991AC342 /* Debug */,
 				A7213566F35BB975A34E1EBB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EE6C0B13E91E50DF942A5435 /* Build configuration list for PBXNativeTarget "AudioTranscriptionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2565B7220304DCB473E9FC1A /* Debug */,
+				4CBFCF77CBB58EEBD5DB7A41 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

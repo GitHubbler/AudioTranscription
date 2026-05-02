@@ -11,7 +11,9 @@ struct TextSegmenter {
         var segments: [TextSegment] = []
 
         for block in textBlocks(from: text) {
-            let sentences = sentenceRanges(in: text, range: block)
+            let sentences = sentenceRanges(in: text, range: block).flatMap { sentence in
+                supplementalSentenceRanges(in: text, range: sentence)
+            }
 
             if sentences.isEmpty {
                 appendSegment(from: block, in: text, to: &segments)
@@ -68,6 +70,39 @@ struct TextSegmenter {
         return ranges
     }
 
+    private func supplementalSentenceRanges(
+        in text: String,
+        range: Range<String.Index>
+    ) -> [Range<String.Index>] {
+        var ranges: [Range<String.Index>] = []
+        var sentenceStart = range.lowerBound
+        var currentIndex = range.lowerBound
+
+        while currentIndex < range.upperBound {
+            let character = text[currentIndex]
+            currentIndex = text.index(after: currentIndex)
+
+            guard isSupplementalSentenceTerminator(character) else {
+                continue
+            }
+
+            var sentenceEnd = currentIndex
+            while sentenceEnd < range.upperBound, isClosingSentencePunctuation(text[sentenceEnd]) {
+                sentenceEnd = text.index(after: sentenceEnd)
+            }
+
+            ranges.append(sentenceStart..<sentenceEnd)
+            sentenceStart = sentenceEnd
+            currentIndex = sentenceEnd
+        }
+
+        if sentenceStart < range.upperBound {
+            ranges.append(sentenceStart..<range.upperBound)
+        }
+
+        return ranges.isEmpty ? [range] : ranges
+    }
+
     private func appendSegment(
         from range: Range<String.Index>,
         in text: String,
@@ -76,9 +111,20 @@ struct TextSegmenter {
         let trimmedRange = trimmedRange(range, in: text)
         guard let trimmedRange else { return }
 
+        let trimmedText = String(text[trimmedRange])
+        if isStandaloneSentencePunctuation(trimmedText), let previous = segments.last {
+            let mergedRange = previous.sourceRange?.lowerBound ?? trimmedRange.lowerBound
+            segments[segments.count - 1] = TextSegment(
+                id: previous.id,
+                text: previous.text + trimmedText,
+                sourceRange: mergedRange..<trimmedRange.upperBound
+            )
+            return
+        }
+
         let segment = TextSegment(
             id: segments.count + 1,
-            text: String(text[trimmedRange]),
+            text: trimmedText,
             sourceRange: trimmedRange
         )
         segments.append(segment)
@@ -99,5 +145,29 @@ struct TextSegmenter {
         }
 
         return lowerBound < upperBound ? lowerBound..<upperBound : nil
+    }
+
+    private func isSupplementalSentenceTerminator(_ character: Character) -> Bool {
+        switch character {
+        case "。", "｡", "？", "?", "！", "!":
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func isClosingSentencePunctuation(_ character: Character) -> Bool {
+        switch character {
+        case "\"", "'", "”", "’", "」", "』", "）", ")", "]", "】", "》":
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func isStandaloneSentencePunctuation(_ text: String) -> Bool {
+        !text.isEmpty && text.allSatisfy { character in
+            isSupplementalSentenceTerminator(character) || isClosingSentencePunctuation(character)
+        }
     }
 }

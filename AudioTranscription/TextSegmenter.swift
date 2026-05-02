@@ -20,6 +20,14 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
     let sourceLang: String
     let enText: String
     let zhText: String
+    let zhLatnPinyin: String
+
+    enum CodingKeys: String, CodingKey {
+        case sourceLang
+        case enText
+        case zhText
+        case zhLatnPinyin = "zh-Latn-pinyin"
+    }
 
     init(sourceLang: String = "und", sourceText: String = "") {
         self.sourceLang = sourceLang
@@ -28,19 +36,36 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         case "en":
             enText = sourceText
             zhText = ""
+            zhLatnPinyin = ""
         case "zh":
             enText = ""
             zhText = sourceText
+            zhLatnPinyin = ""
         default:
             enText = ""
             zhText = ""
+            zhLatnPinyin = ""
         }
     }
 
-    init(sourceLang: String, enText: String, zhText: String) {
+    init(
+        sourceLang: String,
+        enText: String,
+        zhText: String,
+        zhLatnPinyin: String = ""
+    ) {
         self.sourceLang = sourceLang
         self.enText = enText
         self.zhText = zhText
+        self.zhLatnPinyin = zhLatnPinyin
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sourceLang = try container.decode(String.self, forKey: .sourceLang)
+        enText = try container.decode(String.self, forKey: .enText)
+        zhText = try container.decode(String.self, forKey: .zhText)
+        zhLatnPinyin = try container.decodeIfPresent(String.self, forKey: .zhLatnPinyin) ?? ""
     }
 
     var counterpartLanguageCode: String? {
@@ -74,6 +99,30 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         default:
             self
         }
+    }
+
+    func fillingChineseRomanization() -> TextSegmentValue {
+        guard !zhText.isEmpty, zhLatnPinyin.isEmpty else { return self }
+
+        return TextSegmentValue(
+            sourceLang: sourceLang,
+            enText: enText,
+            zhText: zhText,
+            zhLatnPinyin: ChineseRomanizer.pinyin(from: zhText)
+        )
+    }
+}
+
+enum ChineseRomanizer {
+    static func pinyin(from text: String) -> String {
+        let mutableText = NSMutableString(string: text)
+        guard CFStringTransform(mutableText, nil, kCFStringTransformMandarinLatin, false) else {
+            return ""
+        }
+
+        return String(mutableText)
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
     }
 }
 

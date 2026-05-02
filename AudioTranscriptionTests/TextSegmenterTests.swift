@@ -93,12 +93,41 @@ final class TextSegmenterTests: XCTestCase {
 
         XCTAssertEqual(zhValue.zhText, "这是第一句。")
         XCTAssertEqual(zhValue.enText, "")
+        XCTAssertEqual(zhValue.zhLatnPinyin, "")
         XCTAssertEqual(enValue.enText, "This is one sentence.")
         XCTAssertEqual(enValue.zhText, "")
 
         let encoded = try JSONEncoder().encode([zhValue])
         let decoded = try JSONDecoder().decode([TextSegmentValue].self, from: encoded)
         XCTAssertEqual(decoded, [zhValue])
+    }
+
+    func testSegmentLocalValueEncodesPinyinKeyAndDecodesOlderJSON() throws {
+        let value = TextSegmentValue(
+            sourceLang: "zh",
+            enText: "This is the first sentence.",
+            zhText: "这是第一句。",
+            zhLatnPinyin: "zhè shì dì yī jù."
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let encoded = try encoder.encode([value])
+        let json = try XCTUnwrap(String(data: encoded, encoding: .utf8))
+
+        XCTAssertTrue(json.contains("\"zh-Latn-pinyin\""))
+
+        let olderJSON = """
+        [
+          {
+            "sourceLang": "zh",
+            "enText": "This is the first sentence.",
+            "zhText": "这是第一句。"
+          }
+        ]
+        """
+        let decoded = try JSONDecoder().decode([TextSegmentValue].self, from: Data(olderJSON.utf8))
+        XCTAssertEqual(decoded.first?.zhLatnPinyin, "")
     }
 
     func testSegmentLocalValueFillsBlankCounterpart() {
@@ -121,6 +150,19 @@ final class TextSegmenterTests: XCTestCase {
                 zhText: "这是一个句子。"
             )
         )
+    }
+
+    func testSegmentLocalValueFillsChineseRomanization() {
+        let value = TextSegmentValue(
+            sourceLang: "en",
+            enText: "This is one sentence.",
+            zhText: "这是一个句子。"
+        )
+
+        let romanized = value.fillingChineseRomanization()
+
+        XCTAssertFalse(romanized.zhLatnPinyin.isEmpty)
+        XCTAssertTrue(romanized.zhLatnPinyin.lowercased().contains("zh"))
     }
 
     private func audioHint(near marker: String, in text: String) -> AudioBoundaryHint {

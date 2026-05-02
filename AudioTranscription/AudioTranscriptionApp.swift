@@ -307,6 +307,7 @@ final class TranscriptionModel: ObservableObject {
                 )
             }
 
+            updatedRecords = updatedRecords.map { $0.fillingChineseRomanization() }
             jsonText = try renderSegmentRecords(updatedRecords)
             editorMode = .json
             statusText = "Translated \(responses.count) segments into editable JSON"

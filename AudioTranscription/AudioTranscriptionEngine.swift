@@ -27,6 +27,7 @@ enum AudioTranscriptionError: LocalizedError {
     case unsupportedSpeechAssets
     case speechAssetsUnavailable
     case emptyTranscription
+    case noAutomaticLanguageMatch
 
     var errorDescription: String? {
         switch self {
@@ -46,6 +47,8 @@ enum AudioTranscriptionError: LocalizedError {
             return "Speech transcription assets could not be installed."
         case .emptyTranscription:
             return "No speech was recognized in the selected file."
+        case .noAutomaticLanguageMatch:
+            return "No speech was recognized with the automatic language candidates."
         }
     }
 }
@@ -53,14 +56,26 @@ enum AudioTranscriptionError: LocalizedError {
 struct AudioTranscriptionEngine {
     typealias EventHandler = @Sendable (TranscriptionEvent) async -> Void
 
-    func transcribe(fileURL: URL, eventHandler: @escaping EventHandler) async throws -> String {
+    func transcribe(
+        fileURL: URL,
+        language: TranscriptionLanguage,
+        eventHandler: @escaping EventHandler
+    ) async throws -> String {
         try Task.checkCancellation()
         try await requestSpeechRecognitionAuthorization()
 
         if #available(macOS 26.0, *) {
-            return try await transcribeWithSpeechAnalyzer(fileURL: fileURL, eventHandler: eventHandler)
+            return try await transcribeWithSpeechAnalyzer(
+                fileURL: fileURL,
+                language: language,
+                eventHandler: eventHandler
+            )
         } else {
-            return try await transcribeWithSFSpeechRecognizer(fileURL: fileURL, eventHandler: eventHandler)
+            return try await transcribeWithSFSpeechRecognizer(
+                fileURL: fileURL,
+                language: language,
+                eventHandler: eventHandler
+            )
         }
     }
 
@@ -91,19 +106,59 @@ struct AudioTranscriptionEngine {
     }
 
     @available(macOS 26.0, *)
-    private func transcribeWithSpeechAnalyzer(fileURL: URL, eventHandler: @escaping EventHandler) async throws -> String {
+    private func transcribeWithSpeechAnalyzer(
+        fileURL: URL,
+        language: TranscriptionLanguage,
+        eventHandler: @escaping EventHandler
+    ) async throws -> String {
         guard SpeechTranscriber.isAvailable else {
             throw AudioTranscriptionError.speechTranscriberUnavailable
         }
-        guard let locale = await SpeechTranscriber.supportedLocale(equivalentTo: .current) else {
+
+        let candidates = await modernLocaleCandidates(for: language)
+        guard !candidates.isEmpty else {
             throw AudioTranscriptionError.unsupportedLocale
         }
+
+        var lastError: Error?
+        for locale in candidates {
+            do {
+                return try await transcribeWithSpeechAnalyzer(
+                    fileURL: fileURL,
+                    locale: locale,
+                    eventHandler: eventHandler
+                )
+            } catch AudioTranscriptionError.emptyTranscription where language.localeIdentifier == nil {
+                lastError = AudioTranscriptionError.emptyTranscription
+                await eventHandler(.transcript(""))
+            } catch AudioTranscriptionError.unsupportedSpeechAssets where language.localeIdentifier == nil {
+                lastError = AudioTranscriptionError.unsupportedSpeechAssets
+            } catch AudioTranscriptionError.speechAssetsUnavailable where language.localeIdentifier == nil {
+                lastError = AudioTranscriptionError.speechAssetsUnavailable
+            } catch {
+                throw error
+            }
+        }
+
+        if let lastError {
+            throw lastError
+        }
+        throw AudioTranscriptionError.noAutomaticLanguageMatch
+    }
+
+    @available(macOS 26.0, *)
+    private func transcribeWithSpeechAnalyzer(
+        fileURL: URL,
+        locale: Locale,
+        eventHandler: @escaping EventHandler
+    ) async throws -> String {
+        await eventHandler(.status("Trying \(displayName(for: locale))..."))
 
         let transcriber = SpeechTranscriber(locale: locale, preset: .timeIndexedProgressiveTranscription)
         let modules: [any SpeechModule] = [transcriber]
 
         try await prepareAssets(for: modules, eventHandler: eventHandler)
-        await eventHandler(.status("Transcribing..."))
+        await eventHandler(.status("Transcribing \(displayName(for: locale))..."))
 
         let audioFile = try AVAudioFile(forReading: fileURL)
         let analyzer = SpeechAnalyzer(
@@ -120,6 +175,7 @@ struct AudioTranscriptionEngine {
             try await analyzer.finalizeAndFinishThroughEndOfInput()
             let finalText = try await resultsTask.value
             guard !finalText.isEmpty else { throw AudioTranscriptionError.emptyTranscription }
+            await eventHandler(.status("Detected \(displayName(for: locale))"))
             return finalText
         } catch {
             resultsTask.cancel()
@@ -178,14 +234,51 @@ struct AudioTranscriptionEngine {
         return renderText(finalizedSegments, volatileSegment: nil)
     }
 
-    private func transcribeWithSFSpeechRecognizer(fileURL: URL, eventHandler: @escaping EventHandler) async throws -> String {
-        guard let recognizer = SFSpeechRecognizer(locale: .current) ?? SFSpeechRecognizer(locale: Locale(identifier: "en_US")),
+    private func transcribeWithSFSpeechRecognizer(
+        fileURL: URL,
+        language: TranscriptionLanguage,
+        eventHandler: @escaping EventHandler
+    ) async throws -> String {
+        let candidates = legacyLocaleCandidates(for: language)
+        guard !candidates.isEmpty else {
+            throw AudioTranscriptionError.unsupportedLocale
+        }
+
+        var lastError: Error?
+        for locale in candidates {
+            do {
+                return try await transcribeWithSFSpeechRecognizer(
+                    fileURL: fileURL,
+                    locale: locale,
+                    eventHandler: eventHandler
+                )
+            } catch AudioTranscriptionError.emptyTranscription where language.localeIdentifier == nil {
+                lastError = AudioTranscriptionError.emptyTranscription
+                await eventHandler(.transcript(""))
+            } catch {
+                throw error
+            }
+        }
+
+        if let lastError {
+            throw lastError
+        }
+        throw AudioTranscriptionError.noAutomaticLanguageMatch
+    }
+
+    private func transcribeWithSFSpeechRecognizer(
+        fileURL: URL,
+        locale: Locale,
+        eventHandler: @escaping EventHandler
+    ) async throws -> String {
+        guard let recognizer = SFSpeechRecognizer(locale: locale),
               recognizer.isAvailable
         else {
             throw AudioTranscriptionError.speechRecognizerUnavailable
         }
 
-        await eventHandler(.status("Transcribing..."))
+        await eventHandler(.status("Trying \(displayName(for: locale))..."))
+        await eventHandler(.status("Transcribing \(displayName(for: locale))..."))
 
         let request = SFSpeechURLRecognitionRequest(url: fileURL)
         request.shouldReportPartialResults = true
@@ -212,6 +305,9 @@ struct AudioTranscriptionEngine {
                     if trimmedText.isEmpty {
                         continuation.resume(throwing: AudioTranscriptionError.emptyTranscription)
                     } else {
+                        Task {
+                            await eventHandler(.status("Detected \(displayName(for: locale))"))
+                        }
                         continuation.resume(returning: trimmedText)
                     }
                 case .failure(let error):
@@ -236,6 +332,105 @@ struct AudioTranscriptionEngine {
                 }
             }
         }
+    }
+
+    @available(macOS 26.0, *)
+    private func modernLocaleCandidates(for language: TranscriptionLanguage) async -> [Locale] {
+        if let locale = language.locale {
+            return await matchingModernLocales(for: [locale])
+        }
+
+        return await matchingModernLocales(for: automaticCandidateLocales())
+    }
+
+    @available(macOS 26.0, *)
+    private func matchingModernLocales(for locales: [Locale]) async -> [Locale] {
+        var candidates: [Locale] = []
+        for locale in locales {
+            guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
+                continue
+            }
+            appendUnique(supportedLocale, to: &candidates)
+        }
+        return candidates
+    }
+
+    private func legacyLocaleCandidates(for language: TranscriptionLanguage) -> [Locale] {
+        let supportedLocales = SFSpeechRecognizer.supportedLocales()
+        let requestedLocales = language.locale.map { [$0] } ?? automaticCandidateLocales()
+
+        return requestedLocales.reduce(into: []) { candidates, locale in
+            guard let match = bestMatch(for: locale, in: supportedLocales) else {
+                return
+            }
+            appendUnique(match, to: &candidates)
+        }
+    }
+
+    private func automaticCandidateLocales() -> [Locale] {
+        let preferredLocales = Locale.preferredLanguages.map(Locale.init(identifier:))
+        let defaults = [
+            Locale.current,
+            Locale(identifier: "en_US"),
+            Locale(identifier: "zh_Hans"),
+            Locale(identifier: "zh_CN"),
+            Locale(identifier: "zh_Hant"),
+            Locale(identifier: "zh_TW"),
+            Locale(identifier: "ja_JP"),
+            Locale(identifier: "ko_KR"),
+            Locale(identifier: "fr_FR"),
+            Locale(identifier: "es_ES")
+        ]
+
+        return (preferredLocales + defaults).reduce(into: []) { locales, locale in
+            appendUnique(locale, to: &locales)
+        }
+    }
+
+    private func bestMatch(for requestedLocale: Locale, in supportedLocales: Set<Locale>) -> Locale? {
+        let sortedLocales = supportedLocales.sorted { $0.identifier < $1.identifier }
+        let requestedIdentifier = normalizedIdentifier(requestedLocale.identifier)
+
+        if let exactMatch = sortedLocales.first(where: { normalizedIdentifier($0.identifier) == requestedIdentifier }) {
+            return exactMatch
+        }
+
+        guard let requestedLanguage = requestedIdentifier.split(separator: "_").first else {
+            return nil
+        }
+
+        if requestedLanguage == "zh" {
+            let wantsTraditional = requestedIdentifier.contains("hant") || requestedIdentifier.contains("_tw") || requestedIdentifier.contains("_hk")
+            let preferredMarkers = wantsTraditional ? ["hant", "_tw", "_hk", "_mo"] : ["hans", "_cn", "_sg"]
+
+            if let regionalMatch = sortedLocales.first(where: { locale in
+                let identifier = normalizedIdentifier(locale.identifier)
+                return identifier.hasPrefix("zh") && preferredMarkers.contains(where: identifier.contains)
+            }) {
+                return regionalMatch
+            }
+        }
+
+        return sortedLocales.first { locale in
+            normalizedIdentifier(locale.identifier).split(separator: "_").first == requestedLanguage
+        }
+    }
+
+    private func appendUnique(_ locale: Locale, to locales: inout [Locale]) {
+        let identifier = normalizedIdentifier(locale.identifier)
+        guard !locales.contains(where: { normalizedIdentifier($0.identifier) == identifier }) else {
+            return
+        }
+        locales.append(locale)
+    }
+
+    private func normalizedIdentifier(_ identifier: String) -> String {
+        identifier.replacingOccurrences(of: "-", with: "_").lowercased()
+    }
+
+    private func displayName(for locale: Locale) -> String {
+        let identifier = locale.identifier
+        return Locale.current.localizedString(forIdentifier: identifier) ?? identifier
     }
 
     private func upsert(_ segment: TimedTranscriptionSegment, into segments: inout [TimedTranscriptionSegment]) {

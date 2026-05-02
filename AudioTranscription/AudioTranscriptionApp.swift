@@ -26,6 +26,7 @@ final class TranscriptionModel: ObservableObject {
     @Published var statusText = "Choose an audio file"
     @Published var transcriptText = ""
     @Published var selectedFileURL: URL?
+    @Published var selectedLanguage = TranscriptionLanguage.automatic
 
     private let engine = AudioTranscriptionEngine()
     private var transcriptionTask: Task<Void, Never>?
@@ -70,7 +71,8 @@ final class TranscriptionModel: ObservableObject {
 
         transcriptionTask = Task {
             do {
-                let finalText = try await engine.transcribe(fileURL: fileURL) { [weak self] event in
+                let language = selectedLanguage
+                let finalText = try await engine.transcribe(fileURL: fileURL, language: language) { [weak self] event in
                     await self?.handle(event)
                 }
 
@@ -147,6 +149,14 @@ struct ContentView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
+
+            Picker("Language", selection: $model.selectedLanguage) {
+                ForEach(TranscriptionLanguage.choices) { language in
+                    Text(language.name).tag(language)
+                }
+            }
+            .pickerStyle(.menu)
+            .disabled(!model.canOpen)
 
             TextEditor(text: $model.transcriptText)
                 .font(.system(.body, design: .monospaced))

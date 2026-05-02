@@ -13,6 +13,8 @@ struct TextSegmenter {
         for block in textBlocks(from: text) {
             let sentences = sentenceRanges(in: text, range: block).flatMap { sentence in
                 supplementalSentenceRanges(in: text, range: sentence)
+            }.flatMap { sentence in
+                chinesePhraseBoundaryRanges(in: text, range: sentence)
             }
 
             if sentences.isEmpty {
@@ -103,6 +105,117 @@ struct TextSegmenter {
         return ranges.isEmpty ? [range] : ranges
     }
 
+    private func chinesePhraseBoundaryRanges(
+        in text: String,
+        range: Range<String.Index>
+    ) -> [Range<String.Index>] {
+        let candidate = String(text[range])
+        guard containsCJK(candidate) else { return [range] }
+        guard supplementalTerminatorCount(in: candidate) <= 1 else { return [range] }
+
+        var boundaries = Set<String.Index>()
+        addChineseTopicBoundaries(in: text, range: range, to: &boundaries)
+        addChineseListToStatisticBoundaries(in: text, range: range, to: &boundaries)
+
+        return rangesBySplitting(range, at: boundaries)
+    }
+
+    private func addChineseTopicBoundaries(
+        in text: String,
+        range: Range<String.Index>,
+        to boundaries: inout Set<String.Index>
+    ) {
+        let markers = ["本期", "本次", "此次", "此外", "同时", "其中"]
+
+        for marker in markers {
+            var searchStart = range.lowerBound
+            while searchStart < range.upperBound,
+                  let markerRange = text.range(of: marker, range: searchStart..<range.upperBound) {
+                if markerRange.lowerBound > range.lowerBound {
+                    boundaries.insert(markerRange.lowerBound)
+                }
+                searchStart = markerRange.upperBound
+            }
+        }
+    }
+
+    private func addChineseListToStatisticBoundaries(
+        in text: String,
+        range: Range<String.Index>,
+        to boundaries: inout Set<String.Index>
+    ) {
+        let listClosers = ["板块", "类别", "品类", "领域"]
+
+        for closer in listClosers {
+            var searchStart = range.lowerBound
+            while searchStart < range.upperBound,
+                  let closerRange = text.range(of: closer, range: searchStart..<range.upperBound) {
+                let boundary = closerRange.upperBound
+                if isFollowedByStatisticClause(in: text, from: boundary, upperBound: range.upperBound) {
+                    boundaries.insert(boundary)
+                }
+                searchStart = closerRange.upperBound
+            }
+        }
+    }
+
+    private func isFollowedByStatisticClause(
+        in text: String,
+        from index: String.Index,
+        upperBound: String.Index
+    ) -> Bool {
+        guard let firstNonWhitespace = firstNonWhitespaceIndex(in: text, from: index, upperBound: upperBound) else {
+            return false
+        }
+        guard text[firstNonWhitespace].isNumber else {
+            return false
+        }
+
+        var digitEnd = firstNonWhitespace
+        while digitEnd < upperBound, text[digitEnd].isNumber {
+            digitEnd = text.index(after: digitEnd)
+        }
+
+        guard digitEnd < upperBound else { return false }
+        let suffix = String(text[digitEnd..<upperBound])
+        return suffix.hasPrefix("个") || suffix.hasPrefix("项") || suffix.hasPrefix("类")
+    }
+
+    private func firstNonWhitespaceIndex(
+        in text: String,
+        from index: String.Index,
+        upperBound: String.Index
+    ) -> String.Index? {
+        var currentIndex = index
+        while currentIndex < upperBound {
+            if !text[currentIndex].isWhitespace {
+                return currentIndex
+            }
+            currentIndex = text.index(after: currentIndex)
+        }
+        return nil
+    }
+
+    private func rangesBySplitting(
+        _ range: Range<String.Index>,
+        at boundaries: Set<String.Index>
+    ) -> [Range<String.Index>] {
+        let sortedBoundaries = boundaries
+            .filter { range.contains($0) && $0 > range.lowerBound && $0 < range.upperBound }
+            .sorted()
+
+        guard !sortedBoundaries.isEmpty else { return [range] }
+
+        var ranges: [Range<String.Index>] = []
+        var lowerBound = range.lowerBound
+        for boundary in sortedBoundaries {
+            ranges.append(lowerBound..<boundary)
+            lowerBound = boundary
+        }
+        ranges.append(lowerBound..<range.upperBound)
+        return ranges
+    }
+
     private func appendSegment(
         from range: Range<String.Index>,
         in text: String,
@@ -168,6 +281,18 @@ struct TextSegmenter {
     private func isStandaloneSentencePunctuation(_ text: String) -> Bool {
         !text.isEmpty && text.allSatisfy { character in
             isSupplementalSentenceTerminator(character) || isClosingSentencePunctuation(character)
+        }
+    }
+
+    private func supplementalTerminatorCount(in text: String) -> Int {
+        text.reduce(0) { count, character in
+            isSupplementalSentenceTerminator(character) ? count + 1 : count
+        }
+    }
+
+    private func containsCJK(_ text: String) -> Bool {
+        text.unicodeScalars.contains { scalar in
+            (0x4E00...0x9FFF).contains(scalar.value)
         }
     }
 }

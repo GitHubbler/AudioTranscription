@@ -65,7 +65,7 @@ final class TextSegmenterTests: XCTestCase {
         ])
     }
 
-    func testAudioHintsDoNotSplitChineseAtEveryArabicNumber() {
+    func testSplitsChineseNewsCopyWithArabicNumbersConservatively() {
         let text = "今天起我国队 53个非洲建交国全面实施零关税举措中国也由此成为全球首个对所有非洲建交国和所有建交的最不发达国家实施单方面全面临关税的主要经济体 。根据中国海关统计 2025年我国与 53个非洲建交国双边贸易总值超 3480亿美元创历史新高 2026年一季度贸易额总值为 921.6亿美元同比增长 26.8%"
         let context = TextSegmentationContext(
             timedSegments: [],
@@ -82,8 +82,10 @@ final class TextSegmenterTests: XCTestCase {
         let segments = TextSegmenter().sentenceSegments(from: text, context: context)
 
         XCTAssertEqual(segments.map(\.text), [
-            "今天起我国队 53个非洲建交国全面实施零关税举措中国也由此成为全球首个对所有非洲建交国和所有建交的最不发达国家实施单方面全面临关税的主要经济体 。",
-            "根据中国海关统计 2025年我国与 53个非洲建交国双边贸易总值超 3480亿美元创历史新高 2026年一季度贸易额总值为 921.6亿美元同比增长 26.8%"
+            "今天起我国队 53个非洲建交国全面实施零关税举措",
+            "中国也由此成为全球首个对所有非洲建交国和所有建交的最不发达国家实施单方面全面临关税的主要经济体 。",
+            "根据中国海关统计 2025年我国与 53个非洲建交国双边贸易总值超 3480亿美元创历史新高",
+            "2026年一季度贸易额总值为 921.6亿美元同比增长 26.8%"
         ])
     }
 

@@ -168,8 +168,10 @@ struct TextSegmenter {
 
         var boundaries = Set<String.Index>()
         addAudioHintBoundaries(in: text, range: range, context: context, to: &boundaries)
+        addChineseDiscourseTransitionBoundaries(in: text, range: range, to: &boundaries)
         addChineseTopicBoundaries(in: text, range: range, to: &boundaries)
         addChineseListToStatisticBoundaries(in: text, range: range, to: &boundaries)
+        addChineseStatisticPeriodBoundaries(in: text, range: range, to: &boundaries)
 
         return rangesBySplitting(range, at: boundaries)
     }
@@ -318,6 +320,7 @@ struct TextSegmenter {
 
         addChineseTopicBoundaries(in: text, range: range, to: &candidates)
         addChineseListToStatisticBoundaries(in: text, range: range, to: &candidates)
+        addChineseStatisticPeriodBoundaries(in: text, range: range, to: &candidates)
         return Array(candidates)
     }
 
@@ -432,6 +435,26 @@ struct TextSegmenter {
         }
     }
 
+    private func addChineseDiscourseTransitionBoundaries(
+        in text: String,
+        range: Range<String.Index>,
+        to boundaries: inout Set<String.Index>
+    ) {
+        let markers = ["中国也由此", "这也使", "这也让"]
+
+        for marker in markers {
+            var searchStart = range.lowerBound
+            while searchStart < range.upperBound,
+                  let markerRange = text.range(of: marker, range: searchStart..<range.upperBound) {
+                if markerRange.lowerBound > range.lowerBound,
+                   isReasonableSplit(markerRange.lowerBound, in: text, range: range) {
+                    boundaries.insert(markerRange.lowerBound)
+                }
+                searchStart = markerRange.upperBound
+            }
+        }
+    }
+
     private func addChineseListToStatisticBoundaries(
         in text: String,
         range: Range<String.Index>,
@@ -450,6 +473,84 @@ struct TextSegmenter {
                 searchStart = closerRange.upperBound
             }
         }
+    }
+
+    private func addChineseStatisticPeriodBoundaries(
+        in text: String,
+        range: Range<String.Index>,
+        to boundaries: inout Set<String.Index>
+    ) {
+        var searchStart = range.lowerBound
+        while searchStart < range.upperBound,
+              let yearRange = nextArabicYearRange(in: text, range: searchStart..<range.upperBound) {
+            if isReportingPeriodStart(in: text, afterYear: yearRange.upperBound, upperBound: range.upperBound),
+               isPrecededByStatisticConclusion(in: text, before: yearRange.lowerBound, lowerBound: range.lowerBound),
+               isReasonableSplit(yearRange.lowerBound, in: text, range: range) {
+                boundaries.insert(yearRange.lowerBound)
+            }
+
+            searchStart = yearRange.upperBound
+        }
+    }
+
+    private func nextArabicYearRange(
+        in text: String,
+        range: Range<String.Index>
+    ) -> Range<String.Index>? {
+        var currentIndex = range.lowerBound
+
+        while currentIndex < range.upperBound {
+            guard text[currentIndex].isNumber else {
+                currentIndex = text.index(after: currentIndex)
+                continue
+            }
+
+            let digitStart = currentIndex
+            var digitEnd = currentIndex
+            var digitCount = 0
+            while digitEnd < range.upperBound, text[digitEnd].isNumber {
+                digitCount += 1
+                digitEnd = text.index(after: digitEnd)
+            }
+
+            if digitCount == 4, digitEnd < range.upperBound, text[digitEnd] == "年" {
+                return digitStart..<digitEnd
+            }
+
+            currentIndex = digitEnd
+        }
+
+        return nil
+    }
+
+    private func isReportingPeriodStart(
+        in text: String,
+        afterYear yearEnd: String.Index,
+        upperBound: String.Index
+    ) -> Bool {
+        guard yearEnd < upperBound else { return false }
+        let suffix = String(text[yearEnd..<upperBound])
+        return suffix.hasPrefix("年一季度")
+            || suffix.hasPrefix("年二季度")
+            || suffix.hasPrefix("年三季度")
+            || suffix.hasPrefix("年四季度")
+            || suffix.hasPrefix("年上半年")
+            || suffix.hasPrefix("年下半年")
+            || suffix.hasPrefix("年全年")
+    }
+
+    private func isPrecededByStatisticConclusion(
+        in text: String,
+        before index: String.Index,
+        lowerBound: String.Index
+    ) -> Bool {
+        let contextStart = text.index(index, offsetBy: -20, limitedBy: lowerBound) ?? lowerBound
+        let prefix = String(text[contextStart..<index])
+        return prefix.contains("创历史新高")
+            || prefix.contains("同比增长")
+            || prefix.contains("增长")
+            || prefix.contains("下降")
+            || prefix.contains("总值")
     }
 
     private func isFollowedByStatisticClause(

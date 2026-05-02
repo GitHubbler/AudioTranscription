@@ -168,7 +168,6 @@ struct TextSegmenter {
 
         var boundaries = Set<String.Index>()
         addAudioHintBoundaries(in: text, range: range, context: context, to: &boundaries)
-        addChineseDiscourseTransitionBoundaries(in: text, range: range, to: &boundaries)
         addChineseTopicBoundaries(in: text, range: range, to: &boundaries)
         addChineseListToStatisticBoundaries(in: text, range: range, to: &boundaries)
         addChineseStatisticPeriodBoundaries(in: text, range: range, to: &boundaries)
@@ -428,26 +427,6 @@ struct TextSegmenter {
             while searchStart < range.upperBound,
                   let markerRange = text.range(of: marker, range: searchStart..<range.upperBound) {
                 if markerRange.lowerBound > range.lowerBound {
-                    boundaries.insert(markerRange.lowerBound)
-                }
-                searchStart = markerRange.upperBound
-            }
-        }
-    }
-
-    private func addChineseDiscourseTransitionBoundaries(
-        in text: String,
-        range: Range<String.Index>,
-        to boundaries: inout Set<String.Index>
-    ) {
-        let markers = ["中国也由此", "这也使", "这也让"]
-
-        for marker in markers {
-            var searchStart = range.lowerBound
-            while searchStart < range.upperBound,
-                  let markerRange = text.range(of: marker, range: searchStart..<range.upperBound) {
-                if markerRange.lowerBound > range.lowerBound,
-                   isReasonableSplit(markerRange.lowerBound, in: text, range: range) {
                     boundaries.insert(markerRange.lowerBound)
                 }
                 searchStart = markerRange.upperBound

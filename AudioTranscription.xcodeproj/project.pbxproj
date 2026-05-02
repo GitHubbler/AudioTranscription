@@ -8,11 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		2F412F196790D3C79B6815E6 /* TranscriptionLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */; };
+		4A53F123591C54227170617A /* TextSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335D90992AED84DD03E885F4 /* TextSegmenter.swift */; };
 		C4C6479D3CB7D43D93E4C5F3 /* AudioTranscriptionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0A1ED36ADC537E6FE1C77E /* AudioTranscriptionApp.swift */; };
 		E3F3C3F5B25BC63C4F634244 /* AudioTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F0117065851950DC779C22 /* AudioTranscriptionEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		335D90992AED84DD03E885F4 /* TextSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSegmenter.swift; sourceTree = "<group>"; };
 		3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionLanguage.swift; sourceTree = "<group>"; };
 		7E24F2E30C36CFC02AC11C70 /* AudioTranscription.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AudioTranscription.entitlements; sourceTree = "<group>"; };
 		8D0A1ED36ADC537E6FE1C77E /* AudioTranscriptionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranscriptionApp.swift; sourceTree = "<group>"; };
@@ -27,6 +29,7 @@
 				7E24F2E30C36CFC02AC11C70 /* AudioTranscription.entitlements */,
 				8D0A1ED36ADC537E6FE1C77E /* AudioTranscriptionApp.swift */,
 				F4F0117065851950DC779C22 /* AudioTranscriptionEngine.swift */,
+				335D90992AED84DD03E885F4 /* TextSegmenter.swift */,
 				3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */,
 			);
 			path = AudioTranscription;
@@ -109,6 +112,7 @@
 			files = (
 				C4C6479D3CB7D43D93E4C5F3 /* AudioTranscriptionApp.swift in Sources */,
 				E3F3C3F5B25BC63C4F634244 /* AudioTranscriptionEngine.swift in Sources */,
+				4A53F123591C54227170617A /* TextSegmenter.swift in Sources */,
 				2F412F196790D3C79B6815E6 /* TranscriptionLanguage.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

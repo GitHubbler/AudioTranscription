@@ -25,10 +25,12 @@ final class TranscriptionModel: ObservableObject {
     @Published var state: State = .idle
     @Published var statusText = "Choose an audio file"
     @Published var transcriptText = ""
+    @Published private(set) var sentenceSegments: [TextSegment] = []
     @Published var selectedFileURL: URL?
     @Published var selectedLanguage = TranscriptionLanguage.automatic
 
     private let engine = AudioTranscriptionEngine()
+    private let segmenter = TextSegmenter()
     private var transcriptionTask: Task<Void, Never>?
 
     var canOpen: Bool {
@@ -56,7 +58,7 @@ final class TranscriptionModel: ObservableObject {
 
         transcriptionTask?.cancel()
         selectedFileURL = url
-        transcriptText = ""
+        setTranscriptText("")
         state = .fileSelected
         statusText = "Ready: \(url.lastPathComponent)"
     }
@@ -65,7 +67,7 @@ final class TranscriptionModel: ObservableObject {
         guard canStart, let fileURL = selectedFileURL else { return }
 
         transcriptionTask?.cancel()
-        transcriptText = ""
+        setTranscriptText("")
         state = .transcribing
         statusText = "Preparing transcription..."
 
@@ -77,9 +79,9 @@ final class TranscriptionModel: ObservableObject {
                 }
 
                 await MainActor.run {
-                    self.transcriptText = finalText
+                    self.setTranscriptText(finalText)
                     self.state = .completed
-                    self.statusText = "Transcription complete"
+                    self.statusText = "Transcription complete: \(self.sentenceSegments.count) sentences"
                 }
             } catch is CancellationError {
                 await MainActor.run {
@@ -95,17 +97,23 @@ final class TranscriptionModel: ObservableObject {
         }
     }
 
+    func segmentCurrentText() {
+        setTranscriptText(transcriptText)
+        statusText = "Segmented \(sentenceSegments.count) sentences"
+    }
+
     private func handle(_ event: TranscriptionEvent) {
         switch event {
         case .status(let message):
             statusText = message
         case .transcript(let text):
-            transcriptText = text
+            setTranscriptText(text)
         }
     }
 
     func saveTranscription() {
         guard canSave else { return }
+        setTranscriptText(transcriptText)
 
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
@@ -126,6 +134,11 @@ final class TranscriptionModel: ObservableObject {
     private var defaultSaveName: String {
         guard let selectedFileURL else { return "Transcription.txt" }
         return selectedFileURL.deletingPathExtension().lastPathComponent + ".txt"
+    }
+
+    private func setTranscriptText(_ text: String) {
+        sentenceSegments = segmenter.sentenceSegments(from: text)
+        transcriptText = segmenter.renderSentenceList(sentenceSegments)
     }
 }
 
@@ -178,6 +191,11 @@ struct ContentView: View {
                 }
                 .disabled(!model.canStart)
                 .keyboardShortcut(.return)
+
+                Button(action: model.segmentCurrentText) {
+                    Label("Segment", systemImage: "text.line.first.and.arrowtriangle.forward")
+                }
+                .disabled(!model.canSave || !model.canOpen)
 
                 Spacer()
 

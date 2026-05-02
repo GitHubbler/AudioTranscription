@@ -1,0 +1,34 @@
+name: AudioTranscription
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGNING_ALLOWED: YES
+    CODE_SIGNING_REQUIRED: NO
+
+targets:
+  AudioTranscription:
+    type: application
+    platform: macOS
+    sources:
+      - path: AudioTranscription
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        PRODUCT_NAME: AudioTranscription
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.education"
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "AudioTranscription uses speech recognition to transcribe audio files you select."
+        CODE_SIGN_ENTITLEMENTS: AudioTranscription/AudioTranscription.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.AudioTranscription
+        DEVELOPMENT_TEAM: 6DM4EE4S8F
+        CODE_SIGN_IDENTITY: "Apple Development"
+        PROVISIONING_PROFILE_SPECIFIER: ""

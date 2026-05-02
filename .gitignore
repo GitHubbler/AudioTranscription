@@ -1,0 +1,10 @@
+.DS_Store
+xcuserdata/
+DerivedData/
+build/
+*.xcresult
+*.m4a
+*.mp3
+*.wav
+*.aiff
+*.txt

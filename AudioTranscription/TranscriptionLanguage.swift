@@ -9,6 +9,10 @@ struct TranscriptionLanguage: Identifiable, Hashable, Sendable {
         localeIdentifier.map(Locale.init(identifier:))
     }
 
+    var languageCode: String? {
+        localeIdentifier?.normalizedLanguageCode
+    }
+
     static let automatic = TranscriptionLanguage(id: "auto", name: "Auto", localeIdentifier: nil)
 
     static let choices: [TranscriptionLanguage] = [
@@ -23,4 +27,14 @@ struct TranscriptionLanguage: Identifiable, Hashable, Sendable {
         .init(id: "de-DE", name: "German", localeIdentifier: "de_DE"),
         .init(id: "it-IT", name: "Italian", localeIdentifier: "it_IT")
     ]
+}
+
+extension String {
+    var normalizedLanguageCode: String? {
+        split { character in
+            character == "_" || character == "-"
+        }
+        .first
+        .map { String($0).lowercased() }
+    }
 }

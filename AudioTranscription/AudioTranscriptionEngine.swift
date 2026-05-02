@@ -21,6 +21,7 @@ struct TimedTranscriptionSegment: Sendable {
 struct TranscriptionDraft: Sendable {
     let text: String
     let timedSegments: [TimedTranscriptionSegment]
+    let localeIdentifier: String?
 }
 
 enum AudioTranscriptionError: LocalizedError {
@@ -181,7 +182,11 @@ struct AudioTranscriptionEngine {
             let draft = try await resultsTask.value
             guard !draft.text.isEmpty else { throw AudioTranscriptionError.emptyTranscription }
             await eventHandler(.status("Detected \(displayName(for: locale))"))
-            return draft
+            return TranscriptionDraft(
+                text: draft.text,
+                timedSegments: draft.timedSegments,
+                localeIdentifier: locale.identifier
+            )
         } catch {
             resultsTask.cancel()
             throw error
@@ -238,7 +243,8 @@ struct AudioTranscriptionEngine {
 
         return TranscriptionDraft(
             text: renderText(finalizedSegments, volatileSegment: nil),
-            timedSegments: finalizedSegments
+            timedSegments: finalizedSegments,
+            localeIdentifier: nil
         )
     }
 
@@ -296,7 +302,7 @@ struct AudioTranscriptionEngine {
 
         return try await withCheckedThrowingContinuation { continuation in
             var didResume = false
-            var latestDraft = TranscriptionDraft(text: "", timedSegments: [])
+            var latestDraft = TranscriptionDraft(text: "", timedSegments: [], localeIdentifier: locale.identifier)
             var recognitionTask: SFSpeechRecognitionTask?
 
             func finish(_ result: Result<TranscriptionDraft, Error>) {
@@ -318,7 +324,8 @@ struct AudioTranscriptionEngine {
                         }
                         continuation.resume(returning: TranscriptionDraft(
                             text: trimmedText,
-                            timedSegments: draft.timedSegments
+                            timedSegments: draft.timedSegments,
+                            localeIdentifier: locale.identifier
                         ))
                     }
                 case .failure(let error):
@@ -489,6 +496,7 @@ private extension TranscriptionDraft {
     init(result: SFSpeechRecognitionResult) {
         text = result.bestTranscription.formattedString
         timedSegments = result.bestTranscription.segments.map { TimedTranscriptionSegment(segment: $0) }
+        localeIdentifier = nil
     }
 }
 

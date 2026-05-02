@@ -10,7 +10,7 @@ A bare-bones macOS app for transcribing audio files into text.
 - Stream recognized text into the editor as a draft while transcription runs.
 - Edit the draft, then segment the current editor text into a structured sentence list.
 - Use audio pause hints during segmentation when an audio file is available.
-- Save the current transcription as a `.txt` file.
+- Save the current transcription as a `.txt` file and a sibling `.json` record file.
 
 ## Notes
 
@@ -19,5 +19,7 @@ The app uses Apple's modern `SpeechAnalyzer` and `SpeechTranscriber` APIs on mac
 Speech transcription is locale-specific. The `Auto` language mode tries the current and preferred system languages first, then a short set of common language-learning locales including English, Simplified Chinese, Traditional Chinese, Japanese, Korean, French, and Spanish.
 
 Sentence segmentation is kept as structured data in the app and rendered as one sentence per line for this proof of concept. Existing newlines are treated as useful boundaries, but sentence detection also works on arbitrary unsegmented prose. When an audio file is selected, the app also derives pause hints from the waveform and uses them as supporting evidence for sentence boundaries.
+
+The JSON output is currently an array of records with `sourceLang`, `enText`, and `zhText`. The source-language field is filled from the detected transcription locale, the selected language, or a filename language suffix such as `.zh.txt`.
 
 macOS will ask for Speech Recognition permission the first time transcription runs.

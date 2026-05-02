@@ -4,6 +4,38 @@ struct TextSegment: Identifiable, Equatable, Sendable {
     let id: Int
     let text: String
     let sourceRange: Range<String.Index>?
+    let localValue: TextSegmentValue
+
+    func withSourceLanguage(_ sourceLang: String) -> TextSegment {
+        TextSegment(
+            id: id,
+            text: text,
+            sourceRange: sourceRange,
+            localValue: TextSegmentValue(sourceLang: sourceLang, sourceText: text)
+        )
+    }
+}
+
+struct TextSegmentValue: Codable, Equatable, Sendable {
+    let sourceLang: String
+    let enText: String
+    let zhText: String
+
+    init(sourceLang: String = "und", sourceText: String = "") {
+        self.sourceLang = sourceLang
+
+        switch sourceLang {
+        case "en":
+            enText = sourceText
+            zhText = ""
+        case "zh":
+            enText = ""
+            zhText = sourceText
+        default:
+            enText = ""
+            zhText = ""
+        }
+    }
 }
 
 struct TextSegmentationContext: Sendable {
@@ -42,7 +74,12 @@ struct TextSegmenter {
         }
 
         return segments.enumerated().map { index, segment in
-            TextSegment(id: index + 1, text: segment.text, sourceRange: segment.sourceRange)
+            TextSegment(
+                id: index + 1,
+                text: segment.text,
+                sourceRange: segment.sourceRange,
+                localValue: segment.localValue
+            )
         }
     }
 
@@ -486,7 +523,8 @@ struct TextSegmenter {
             segments[segments.count - 1] = TextSegment(
                 id: previous.id,
                 text: previous.text + trimmedText,
-                sourceRange: mergedRange..<trimmedRange.upperBound
+                sourceRange: mergedRange..<trimmedRange.upperBound,
+                localValue: TextSegmentValue(sourceText: previous.text + trimmedText)
             )
             return
         }
@@ -494,7 +532,8 @@ struct TextSegmenter {
         let segment = TextSegment(
             id: segments.count + 1,
             text: trimmedText,
-            sourceRange: trimmedRange
+            sourceRange: trimmedRange,
+            localValue: TextSegmentValue(sourceText: trimmedText)
         )
         segments.append(segment)
     }

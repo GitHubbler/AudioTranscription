@@ -169,8 +169,12 @@ final class TranscriptionModel: ObservableObject {
         guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
 
         do {
+            let records = segmentRecordsForCurrentText()
+            let jsonURL = destinationURL.deletingPathExtension().appendingPathExtension("json")
+
             try transcriptText.write(to: destinationURL, atomically: true, encoding: .utf8)
-            statusText = "Saved \(destinationURL.lastPathComponent)"
+            try writeSegmentRecords(records, to: jsonURL)
+            statusText = "Saved \(destinationURL.lastPathComponent) and \(jsonURL.lastPathComponent)"
         } catch {
             state = .failed
             statusText = error.localizedDescription
@@ -204,8 +208,44 @@ final class TranscriptionModel: ObservableObject {
     }
 
     private func applySegmentedText(_ text: String) {
-        sentenceSegments = segmenter.sentenceSegments(from: text, context: segmentationContext)
+        sentenceSegments = localizedSegments(from: text)
         transcriptText = segmenter.renderSentenceList(sentenceSegments)
+    }
+
+    private func localizedSegments(from text: String) -> [TextSegment] {
+        let sourceLang = currentSourceLanguageCode
+        return segmenter
+            .sentenceSegments(from: text, context: segmentationContext)
+            .map { $0.withSourceLanguage(sourceLang) }
+    }
+
+    private func segmentRecordsForCurrentText() -> [TextSegmentValue] {
+        localizedSegments(from: transcriptText).map(\.localValue)
+    }
+
+    private func writeSegmentRecords(_ records: [TextSegmentValue], to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        let data = try encoder.encode(records)
+        try data.write(to: url, options: .atomic)
+    }
+
+    private var currentSourceLanguageCode: String {
+        if let localeIdentifier = transcriptionDraft?.localeIdentifier,
+           let languageCode = localeIdentifier.normalizedLanguageCode {
+            return languageCode
+        }
+
+        if let languageCode = selectedLanguage.languageCode {
+            return languageCode
+        }
+
+        if let languageCode = selectedFileURL?.deletingPathExtension().pathExtension.normalizedLanguageCode,
+           !languageCode.isEmpty {
+            return languageCode
+        }
+
+        return "und"
     }
 
     private func isAudioFile(_ url: URL) -> Bool {

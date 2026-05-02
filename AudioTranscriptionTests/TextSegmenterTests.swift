@@ -87,6 +87,20 @@ final class TextSegmenterTests: XCTestCase {
         ])
     }
 
+    func testSegmentLocalValueStoresSourceTextByLanguage() throws {
+        let zhValue = TextSegmentValue(sourceLang: "zh", sourceText: "这是第一句。")
+        let enValue = TextSegmentValue(sourceLang: "en", sourceText: "This is one sentence.")
+
+        XCTAssertEqual(zhValue.zhText, "这是第一句。")
+        XCTAssertEqual(zhValue.enText, "")
+        XCTAssertEqual(enValue.enText, "This is one sentence.")
+        XCTAssertEqual(enValue.zhText, "")
+
+        let encoded = try JSONEncoder().encode([zhValue])
+        let decoded = try JSONDecoder().decode([TextSegmentValue].self, from: encoded)
+        XCTAssertEqual(decoded, [zhValue])
+    }
+
     private func audioHint(near marker: String, in text: String) -> AudioBoundaryHint {
         guard let markerRange = text.range(of: marker) else {
             return AudioBoundaryHint(time: 0, duration: 0.25, confidence: 0.7)

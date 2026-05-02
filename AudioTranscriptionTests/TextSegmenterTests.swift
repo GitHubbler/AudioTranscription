@@ -64,4 +64,36 @@ final class TextSegmenterTests: XCTestCase {
             "第三段内容。"
         ])
     }
+
+    func testAudioHintsDoNotSplitChineseAtEveryArabicNumber() {
+        let text = "今天起我国队 53个非洲建交国全面实施零关税举措中国也由此成为全球首个对所有非洲建交国和所有建交的最不发达国家实施单方面全面临关税的主要经济体 。根据中国海关统计 2025年我国与 53个非洲建交国双边贸易总值超 3480亿美元创历史新高 2026年一季度贸易额总值为 921.6亿美元同比增长 26.8%"
+        let context = TextSegmentationContext(
+            timedSegments: [],
+            audioBoundaryHints: [
+                audioHint(near: " 53个非洲", in: text),
+                audioHint(near: " 2025年", in: text),
+                audioHint(near: " 3480亿美元", in: text),
+                audioHint(near: " 921.6亿美元", in: text),
+                audioHint(near: " 26.8%", in: text)
+            ],
+            audioDuration: 100
+        )
+
+        let segments = TextSegmenter().sentenceSegments(from: text, context: context)
+
+        XCTAssertEqual(segments.map(\.text), [
+            "今天起我国队 53个非洲建交国全面实施零关税举措中国也由此成为全球首个对所有非洲建交国和所有建交的最不发达国家实施单方面全面临关税的主要经济体 。",
+            "根据中国海关统计 2025年我国与 53个非洲建交国双边贸易总值超 3480亿美元创历史新高 2026年一季度贸易额总值为 921.6亿美元同比增长 26.8%"
+        ])
+    }
+
+    private func audioHint(near marker: String, in text: String) -> AudioBoundaryHint {
+        guard let markerRange = text.range(of: marker) else {
+            return AudioBoundaryHint(time: 0, duration: 0.25, confidence: 0.7)
+        }
+
+        let offset = text.distance(from: text.startIndex, to: markerRange.lowerBound)
+        let midpoint = Double(offset) / Double(text.count) * 100
+        return AudioBoundaryHint(time: midpoint - 0.125, duration: 0.25, confidence: 0.7)
+    }
 }

@@ -264,9 +264,11 @@ struct TextSegmenter {
             let nextIndex = text.index(after: currentIndex)
 
             if character.isWhitespace {
-                candidates.insert(currentIndex)
-                if nextIndex < range.upperBound {
-                    candidates.insert(nextIndex)
+                if !isAdjacentToNonHanziNumber(at: currentIndex, in: text, range: range) {
+                    candidates.insert(currentIndex)
+                    if nextIndex < range.upperBound {
+                        candidates.insert(nextIndex)
+                    }
                 }
             }
 
@@ -309,7 +311,69 @@ struct TextSegmenter {
             return true
         }
 
+        if text[index].isWhitespace, isAdjacentToNonHanziNumber(at: index, in: text, range: range) {
+            return true
+        }
+
+        if isNonHanziNumber(previous) || isNonHanziNumber(next) {
+            return true
+        }
+
         return previous == "." || next == "."
+    }
+
+    private func isAdjacentToNonHanziNumber(
+        at index: String.Index,
+        in text: String,
+        range: Range<String.Index>
+    ) -> Bool {
+        if let previous = previousNonWhitespaceCharacter(before: index, in: text, lowerBound: range.lowerBound),
+           isNonHanziNumber(previous) {
+            return true
+        }
+
+        if let next = nextNonWhitespaceCharacter(after: index, in: text, upperBound: range.upperBound),
+           isNonHanziNumber(next) {
+            return true
+        }
+
+        return false
+    }
+
+    private func previousNonWhitespaceCharacter(
+        before index: String.Index,
+        in text: String,
+        lowerBound: String.Index
+    ) -> Character? {
+        var currentIndex = index
+        while currentIndex > lowerBound {
+            currentIndex = text.index(before: currentIndex)
+            let character = text[currentIndex]
+            if !character.isWhitespace {
+                return character
+            }
+        }
+        return nil
+    }
+
+    private func nextNonWhitespaceCharacter(
+        after index: String.Index,
+        in text: String,
+        upperBound: String.Index
+    ) -> Character? {
+        var currentIndex = text.index(after: index)
+        while currentIndex < upperBound {
+            let character = text[currentIndex]
+            if !character.isWhitespace {
+                return character
+            }
+            currentIndex = text.index(after: currentIndex)
+        }
+        return nil
+    }
+
+    private func isNonHanziNumber(_ character: Character) -> Bool {
+        character.isNumber || character == "." || character == "%"
     }
 
     private func addChineseTopicBoundaries(

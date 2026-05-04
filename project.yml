@@ -21,6 +21,9 @@ targets:
       - path: AudioTranscription
         excludes:
           - "**/.DS_Store"
+      - path: Shared
+        excludes:
+          - "**/.DS_Store"
     settings:
       base:
         PRODUCT_NAME: AudioTranscription
@@ -29,6 +32,26 @@ targets:
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "AudioTranscription uses speech recognition to transcribe audio files you select."
         CODE_SIGN_ENTITLEMENTS: AudioTranscription/AudioTranscription.entitlements
         PRODUCT_BUNDLE_IDENTIFIER: com.example.AudioTranscription
+        DEVELOPMENT_TEAM: 6DM4EE4S8F
+        CODE_SIGN_IDENTITY: "Apple Development"
+        PROVISIONING_PROFILE_SPECIFIER: ""
+
+  SegmentsReader:
+    type: application
+    platform: macOS
+    sources:
+      - path: SegmentsReader
+        excludes:
+          - "**/.DS_Store"
+      - path: Shared
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        PRODUCT_NAME: SegmentsReader
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.education"
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.SegmentsReader
         DEVELOPMENT_TEAM: 6DM4EE4S8F
         CODE_SIGN_IDENTITY: "Apple Development"
         PROVISIONING_PROFILE_SPECIFIER: ""
@@ -44,3 +67,5 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.example.AudioTranscriptionTests
+        DEVELOPMENT_TEAM: 6DM4EE4S8F
+        CODE_SIGN_IDENTITY: "Apple Development"

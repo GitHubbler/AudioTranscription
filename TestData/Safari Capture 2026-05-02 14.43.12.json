@@ -1,0 +1,390 @@
+[
+  {
+    "enText" : "Starting from today, 53 African countries that have established diplomatic relations have fully implemented zero tariffs. China has also become the first major economy in the world to unilaterally face tariffs for all African countries and all least developed countries that have established diplomatic relations.",
+    "sourceLang" : "zh",
+    "zh-Latn-pinyin" : "jīn tiān qǐ wǒ guó duì 53 gè fēi zhōu jiàn jiāo guó quán miàn shí shī líng guān shuì jǔ cuò zhōng guó yě yóu cǐ chéng wèi quán qiú shǒu gè duì suǒ yǒu fēi zhōu jiàn jiāo guó hé suǒ yǒu jiàn jiāo de zuì bù fā dá guó jiā shí shī dān fāng miàn quán miàn lín guān shuì de zhǔ yào jīng jì tǐ 。",
+    "zhLexicalUnits" : [
+      {
+        "kind" : "hanzi",
+        "surface" : "今天",
+        "zh-Latn-pinyin" : "jīn tiān"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "起",
+        "zh-Latn-pinyin" : "qǐ"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "我",
+        "zh-Latn-pinyin" : "wǒ"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "国队",
+        "zh-Latn-pinyin" : "guó duì"
+      },
+      {
+        "kind" : "number",
+        "surface" : "53"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "个",
+        "zh-Latn-pinyin" : "gè"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "非洲",
+        "zh-Latn-pinyin" : "fēi zhōu"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "建交国",
+        "zh-Latn-pinyin" : "jiàn jiāo guó"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "全面",
+        "zh-Latn-pinyin" : "quán miàn"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "实施",
+        "zh-Latn-pinyin" : "shí shī"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "零",
+        "zh-Latn-pinyin" : "líng"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "关税",
+        "zh-Latn-pinyin" : "guān shuì"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "举措",
+        "zh-Latn-pinyin" : "jǔ cuò"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "中国",
+        "zh-Latn-pinyin" : "zhōng guó"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "也",
+        "zh-Latn-pinyin" : "yě"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "由此",
+        "zh-Latn-pinyin" : "yóu cǐ"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "成为",
+        "zh-Latn-pinyin" : "chéng wèi"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "全球",
+        "zh-Latn-pinyin" : "quán qiú"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "首",
+        "zh-Latn-pinyin" : "shǒu"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "个",
+        "zh-Latn-pinyin" : "gè"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "对",
+        "zh-Latn-pinyin" : "duì"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "所有",
+        "zh-Latn-pinyin" : "suǒ yǒu"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "非洲",
+        "zh-Latn-pinyin" : "fēi zhōu"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "建交国",
+        "zh-Latn-pinyin" : "jiàn jiāo guó"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "和",
+        "zh-Latn-pinyin" : "hé"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "所有",
+        "zh-Latn-pinyin" : "suǒ yǒu"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "建交",
+        "zh-Latn-pinyin" : "jiàn jiāo"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "的",
+        "zh-Latn-pinyin" : "de"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "最",
+        "zh-Latn-pinyin" : "zuì"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "不",
+        "zh-Latn-pinyin" : "bù"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "发达",
+        "zh-Latn-pinyin" : "fā dá"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "国家",
+        "zh-Latn-pinyin" : "guó jiā"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "实施",
+        "zh-Latn-pinyin" : "shí shī"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "单方面",
+        "zh-Latn-pinyin" : "dān fāng miàn"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "全",
+        "zh-Latn-pinyin" : "quán"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "面临",
+        "zh-Latn-pinyin" : "miàn lín"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "关税",
+        "zh-Latn-pinyin" : "guān shuì"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "的",
+        "zh-Latn-pinyin" : "de"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "主要",
+        "zh-Latn-pinyin" : "zhǔ yào"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "经济体",
+        "zh-Latn-pinyin" : "jīng jì tǐ"
+      },
+      {
+        "kind" : "punctuation",
+        "surface" : "。"
+      }
+    ],
+    "zhText" : "今天起我国队 53个非洲建交国全面实施零关税举措中国也由此成为全球首个对所有非洲建交国和所有建交的最不发达国家实施单方面全面临关税的主要经济体 。"
+  },
+  {
+    "enText" : "According to the statistics of China Customs, the total bilateral trade value between China and 53 African countries in 2025 exceeded 348 billion US dollars, a record high. The total trade value in the first quarter of 2026 was 92.16 billion US dollars, an increase of 26.8% year-on-year.",
+    "sourceLang" : "zh",
+    "zh-Latn-pinyin" : "gēn jù zhōng guó hǎi guān tǒng jì 2025 nián wǒ guó yǔ 53 gè fēi zhōu jiàn jiāo guó shuāng biān mào yì zǒng zhí chāo 3480 yì měi yuán chuàng lì shǐ xīn gāo 2026 nián yī jì dù mào yì é zǒng zhí wèi 921.6 yì měi yuán tóng bǐ zēng zhǎng 26.8%",
+    "zhLexicalUnits" : [
+      {
+        "kind" : "hanzi",
+        "surface" : "根据",
+        "zh-Latn-pinyin" : "gēn jù"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "中国",
+        "zh-Latn-pinyin" : "zhōng guó"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "海关",
+        "zh-Latn-pinyin" : "hǎi guān"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "统计",
+        "zh-Latn-pinyin" : "tǒng jì"
+      },
+      {
+        "kind" : "number",
+        "surface" : "2025"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "年",
+        "zh-Latn-pinyin" : "nián"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "我国",
+        "zh-Latn-pinyin" : "wǒ guó"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "与",
+        "zh-Latn-pinyin" : "yǔ"
+      },
+      {
+        "kind" : "number",
+        "surface" : "53"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "个",
+        "zh-Latn-pinyin" : "gè"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "非洲",
+        "zh-Latn-pinyin" : "fēi zhōu"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "建交国",
+        "zh-Latn-pinyin" : "jiàn jiāo guó"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "双边",
+        "zh-Latn-pinyin" : "shuāng biān"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "贸易",
+        "zh-Latn-pinyin" : "mào yì"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "总值",
+        "zh-Latn-pinyin" : "zǒng zhí"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "超",
+        "zh-Latn-pinyin" : "chāo"
+      },
+      {
+        "kind" : "number",
+        "surface" : "3480"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "亿",
+        "zh-Latn-pinyin" : "yì"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "美元",
+        "zh-Latn-pinyin" : "měi yuán"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "创",
+        "zh-Latn-pinyin" : "chuàng"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "历史",
+        "zh-Latn-pinyin" : "lì shǐ"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "新高",
+        "zh-Latn-pinyin" : "xīn gāo"
+      },
+      {
+        "kind" : "number",
+        "surface" : "2026"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "年",
+        "zh-Latn-pinyin" : "nián"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "一",
+        "zh-Latn-pinyin" : "yī"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "季度",
+        "zh-Latn-pinyin" : "jì dù"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "贸易额",
+        "zh-Latn-pinyin" : "mào yì é"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "总值",
+        "zh-Latn-pinyin" : "zǒng zhí"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "为",
+        "zh-Latn-pinyin" : "wèi"
+      },
+      {
+        "kind" : "number",
+        "surface" : "921.6"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "亿",
+        "zh-Latn-pinyin" : "yì"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "美元",
+        "zh-Latn-pinyin" : "měi yuán"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "同比",
+        "zh-Latn-pinyin" : "tóng bǐ"
+      },
+      {
+        "kind" : "hanzi",
+        "surface" : "增长",
+        "zh-Latn-pinyin" : "zēng zhǎng"
+      },
+      {
+        "kind" : "number",
+        "surface" : "26.8%"
+      }
+    ],
+    "zhText" : "根据中国海关统计 2025年我国与 53个非洲建交国双边贸易总值超 3480亿美元创历史新高 2026年一季度贸易额总值为 921.6亿美元同比增长 26.8%"
+  }
+]

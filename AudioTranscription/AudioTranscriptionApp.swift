@@ -307,7 +307,7 @@ final class TranscriptionModel: ObservableObject {
                 )
             }
 
-            updatedRecords = updatedRecords.map { $0.fillingChineseRomanization() }
+            updatedRecords = updatedRecords.map { $0.fillingPhonetics() }
             jsonText = try renderSegmentRecords(updatedRecords)
             editorMode = .json
             statusText = "Translated \(responses.count) segments into editable JSON"
@@ -391,7 +391,7 @@ final class TranscriptionModel: ObservableObject {
     private func encodedSegmentRecords(_ records: [TextSegmentValue]) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(records)
+        return try encoder.encode(records.map { $0.fillingPhonetics() })
     }
 
     private func validateSegmentJSON(_ text: String) throws {

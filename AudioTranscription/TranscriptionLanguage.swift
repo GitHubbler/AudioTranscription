@@ -25,6 +25,7 @@ struct TranscriptionLanguage: Identifiable, Hashable, Sendable {
         .init(id: "fr-FR", name: "French", localeIdentifier: "fr_FR"),
         .init(id: "es-ES", name: "Spanish", localeIdentifier: "es_ES"),
         .init(id: "de-DE", name: "German", localeIdentifier: "de_DE"),
+        .init(id: "ro-RO", name: "Romanian", localeIdentifier: "ro_RO"),
         .init(id: "it-IT", name: "Italian", localeIdentifier: "it_IT")
     ]
 }

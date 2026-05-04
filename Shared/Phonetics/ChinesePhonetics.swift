@@ -32,11 +32,13 @@ enum ChineseLexicalAnnotator {
             if kind == .hanzi {
                 units.append(contentsOf: hanziUnits(from: current))
             } else if kind == .number {
+                let pinyin = MandarinNumberRomanizer.pinyinForNumberRun(current)
                 units.append(
                     ChineseLexicalUnit(
                         surface: current,
                         kind: kind,
-                        zhLatnPinyin: MandarinNumberRomanizer.pinyinForNumberRun(current),
+                        zhLatnPinyin: pinyin,
+                        ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
                         enGloss: TemporaryChineseGlosses.gloss(for: current, kind: kind)
                     )
                 )
@@ -85,11 +87,13 @@ enum ChineseLexicalAnnotator {
         var units: [ChineseLexicalUnit] = []
         tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
             let surface = String(text[range])
+            let pinyin = ChineseRomanizer.pinyinForHanzi(surface)
             units.append(
                 ChineseLexicalUnit(
                     surface: surface,
                     kind: .hanzi,
-                    zhLatnPinyin: ChineseRomanizer.pinyinForHanzi(surface),
+                    zhLatnPinyin: pinyin,
+                    ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
                     enGloss: TemporaryChineseGlosses.gloss(for: surface, kind: .hanzi)
                 )
             )
@@ -99,10 +103,12 @@ enum ChineseLexicalAnnotator {
         if units.isEmpty {
             units = text.map { character in
                 let surface = String(character)
+                let pinyin = ChineseRomanizer.pinyinForHanzi(surface)
                 return ChineseLexicalUnit(
                     surface: surface,
                     kind: .hanzi,
-                    zhLatnPinyin: ChineseRomanizer.pinyinForHanzi(surface),
+                    zhLatnPinyin: pinyin,
+                    ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
                     enGloss: TemporaryChineseGlosses.gloss(for: surface, kind: .hanzi)
                 )
             }
@@ -133,7 +139,7 @@ enum ChineseLexicalAnnotator {
 }
 
 enum ChineseCharacterAnnotator {
-    static func units(from text: String) -> [ChineseCharacterUnit] {
+    static func units(from text: String, cache: LocalAnnotationCache? = nil) -> [ChineseCharacterUnit] {
         text.compactMap { character in
             guard !character.isWhitespace else { return nil }
 
@@ -147,12 +153,18 @@ enum ChineseCharacterAnnotator {
                 pinyin = ""
             }
 
-            return ChineseCharacterUnit(
+            if let cachedUnit = cache?.chineseCharacterUnit(surface: surface, pinyin: pinyin) {
+                return cachedUnit
+            }
+
+            let unit = ChineseCharacterUnit(
                 surface: surface,
                 zhLatnPinyin: pinyin,
-                ipa: TemporaryIPAAnnotator.ipaPlaceholder(for: surface, languageCode: "zh"),
+                ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
                 enGloss: TemporaryChineseGlosses.gloss(for: surface, kind: nil)
             )
+            cache?.storeChineseCharacterUnit(unit)
+            return unit
         }
     }
 }

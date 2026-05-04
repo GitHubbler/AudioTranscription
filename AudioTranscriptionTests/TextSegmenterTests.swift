@@ -210,6 +210,28 @@ final class TextSegmenterTests: XCTestCase {
         XCTAssertEqual(filled.zhLatnPinyin, "")
     }
 
+    func testSegmentLocalValueRefreshesTemporaryCharacterIPA() {
+        let value = TextSegmentValue(
+            sourceLang: "zh",
+            enText: "Now",
+            zhText: "今",
+            zhLatnPinyin: "jīn",
+            zhCharacterUnits: [
+                ChineseCharacterUnit(
+                    surface: "今",
+                    zhLatnPinyin: "jīn",
+                    ipa: TemporaryIPAAnnotator.placeholder,
+                    enGloss: "now"
+                )
+            ]
+        )
+
+        let filled = value.fillingPhonetics()
+
+        XCTAssertEqual(filled.zhCharacterUnits.first?.ipa, "tɕin˥")
+        XCTAssertEqual(filled.ipa, "tɕin˥")
+    }
+
     func testChineseLexicalAnnotationSeparatesArabicNumbersFromHanzi() {
         let units = ChineseLexicalAnnotator.units(from: "53个非洲建交国同比增长 26.8%")
 
@@ -236,8 +258,26 @@ final class TextSegmenterTests: XCTestCase {
 
         XCTAssertEqual(units.map(\.surface), ["今", "天", "5", "3", "个"])
         XCTAssertEqual(units.map(\.zhLatnPinyin), ["jīn", "tiān", "wǔ", "sān", "gè"])
-        XCTAssertEqual(units.map(\.ipa), Array(repeating: TemporaryIPAAnnotator.placeholder, count: 5))
+        XCTAssertEqual(units.map(\.ipa), ["tɕin˥", "tʰjɛn˥", "u˨˩˦", "san˥", "kɤ˥˩"])
         XCTAssertEqual(units.map(\.enGloss), ["now", "day", "five", "three", "classifier"])
+    }
+
+    func testLocalAnnotationCachePersistsChineseCharacterUnits() throws {
+        let cacheURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+            .appendingPathComponent("annotation-cache-v1.json")
+        let cache = LocalAnnotationCache(url: cacheURL)
+        let unit = ChineseCharacterUnit(
+            surface: "今",
+            zhLatnPinyin: "jīn",
+            ipa: "tɕin˥",
+            enGloss: "now"
+        )
+
+        cache.storeChineseCharacterUnit(unit)
+        let reloadedCache = LocalAnnotationCache(url: cacheURL)
+
+        XCTAssertEqual(reloadedCache.chineseCharacterUnit(surface: "今", pinyin: "jīn"), unit)
     }
 
     func testChineseCharacterAnnotationGlossesCurrentNewsSample() {

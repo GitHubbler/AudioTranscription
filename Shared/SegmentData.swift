@@ -172,18 +172,18 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         }
     }
 
-    func fillingPhonetics() -> TextSegmentValue {
-        fillingChineseRomanization().fillingTemporaryIPA()
+    func fillingPhonetics(cache: LocalAnnotationCache? = nil) -> TextSegmentValue {
+        fillingChineseRomanization(cache: cache).fillingTemporaryIPA()
     }
 
-    func fillingChineseRomanization() -> TextSegmentValue {
+    func fillingChineseRomanization(cache: LocalAnnotationCache? = nil) -> TextSegmentValue {
         guard !zhText.isEmpty else { return self }
 
         let lexicalUnits = zhLexicalUnits.isEmpty
             ? ChineseLexicalAnnotator.units(from: zhText)
             : zhLexicalUnits
-        let characterUnits = zhCharacterUnits.isEmpty
-            ? ChineseCharacterAnnotator.units(from: zhText)
+        let characterUnits = zhCharacterUnits.needsCharacterIPARefresh
+            ? ChineseCharacterAnnotator.units(from: zhText, cache: cache)
             : zhCharacterUnits
         let pinyin = zhLatnPinyin.isEmpty
             ? ChineseRomanizer.pinyin(from: zhText)
@@ -203,9 +203,14 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
     }
 
     func fillingTemporaryIPA() -> TextSegmentValue {
-        guard ipa.isEmpty, let phoneticBasisText else { return self }
+        guard ipa.isEmpty || ipa == TemporaryIPAAnnotator.placeholder,
+              let phoneticBasisText else {
+            return self
+        }
 
-        let ipa = TemporaryIPAAnnotator.ipaPlaceholder(for: phoneticBasisText, languageCode: sourceLang)
+        let ipa = zhText.isEmpty
+            ? TemporaryIPAAnnotator.ipaPlaceholder(for: phoneticBasisText, languageCode: sourceLang)
+            : MandarinIPAConverter.ipa(fromPinyin: zhLatnPinyin)
         guard !ipa.isEmpty else { return self }
 
         return copy(ipa: ipa)
@@ -283,6 +288,18 @@ struct ChineseCharacterUnit: Codable, Equatable, Sendable {
         if !enGloss.isEmpty {
             try container.encode(enGloss, forKey: .enGloss)
         }
+    }
+}
+
+extension ChineseCharacterUnit {
+    var hasUsableCharacterIPA: Bool {
+        !ipa.isEmpty && ipa != TemporaryIPAAnnotator.placeholder
+    }
+}
+
+private extension [ChineseCharacterUnit] {
+    var needsCharacterIPARefresh: Bool {
+        isEmpty || contains { !$0.hasUsableCharacterIPA }
     }
 }
 

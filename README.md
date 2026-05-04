@@ -14,6 +14,8 @@ A bare-bones macOS app for transcribing audio files into text.
 
 ## Notes
 
+Open design and data-model ideas live in [docs/Backlog.md](docs/Backlog.md). It is intentionally lightweight: a place to collect and reorder embryos before they deserve heavier process.
+
 The app uses Apple's modern `SpeechAnalyzer` and `SpeechTranscriber` APIs on macOS 26 and newer. On older systems it falls back to `SFSpeechRecognizer` so the proof of concept remains usable while the newer API settles.
 
 Speech transcription is locale-specific. The `Auto` language mode tries the current and preferred system languages first, then a short set of common language-learning locales including English, Simplified Chinese, Traditional Chinese, Japanese, Korean, French, and Spanish.

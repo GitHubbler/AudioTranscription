@@ -434,7 +434,7 @@ private extension SegmentRecord {
 
 private extension ChineseCharacterUnit {
     var displayIPA: String {
-        ipa.isEmpty ? TemporaryIPAAnnotator.ipaPlaceholder(for: surface, languageCode: "zh") : ipa
+        hasUsableCharacterIPA ? ipa : MandarinIPAConverter.ipa(fromPinyin: zhLatnPinyin)
     }
 }
 

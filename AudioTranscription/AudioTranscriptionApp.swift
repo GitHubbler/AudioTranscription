@@ -53,6 +53,7 @@ final class TranscriptionModel: ObservableObject {
     private var transcriptionDraft: TranscriptionDraft?
     private var lastJSONSaveURL: URL?
     private var pendingTranslation: PendingTranslation?
+    private let annotationCache = LocalAnnotationCache.shared
 
     var canOpen: Bool {
         state != .transcribing
@@ -307,7 +308,7 @@ final class TranscriptionModel: ObservableObject {
                 )
             }
 
-            updatedRecords = updatedRecords.map { $0.fillingPhonetics() }
+            updatedRecords = updatedRecords.map { $0.fillingPhonetics(cache: annotationCache) }
             jsonText = try renderSegmentRecords(updatedRecords)
             editorMode = .json
             statusText = "Translated \(responses.count) segments into editable JSON"
@@ -391,7 +392,7 @@ final class TranscriptionModel: ObservableObject {
     private func encodedSegmentRecords(_ records: [TextSegmentValue]) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(records.map { $0.fillingPhonetics() })
+        return try encoder.encode(records.map { $0.fillingPhonetics(cache: annotationCache) })
     }
 
     private func validateSegmentJSON(_ text: String) throws {

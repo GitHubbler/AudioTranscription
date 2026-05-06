@@ -55,6 +55,14 @@
 		FB48642F7072161A705EB9DE /* AudioTranscription.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioTranscription.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		8FB1D7DE2FA844EC0049BCDF /* docs */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = docs;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXGroup section */
 		09EC30788600D6A2DAC78923 /* Shared */ = {
 			isa = PBXGroup;
@@ -100,6 +108,7 @@
 		C5D534B03EC1FB7A05E6EBE2 = {
 			isa = PBXGroup;
 			children = (
+				8FB1D7DE2FA844EC0049BCDF /* docs */,
 				A3474AA9DAB75C81E2EB97B7 /* AudioTranscription */,
 				8B5FD44B85AC34ACD04EB31E /* AudioTranscriptionTests */,
 				D3DC005F719C305238A84C0C /* SegmentsReader */,
@@ -292,6 +301,9 @@
 				PRODUCT_NAME = SegmentsReader;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Release;
 		};
@@ -391,6 +403,9 @@
 				PRODUCT_NAME = SegmentsReader;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Debug;
 		};

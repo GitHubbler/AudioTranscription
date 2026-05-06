@@ -5,6 +5,7 @@ This is a lightweight place to collect ideas before they deserve design, code, o
 ## Now
 
 - Character IPA is deterministic pinyin-to-IPA, not a full phonology engine. It does not yet handle tone sandhi, contextual pronunciation, or heteronym correction beyond the pinyin supplied upstream.
+//pva: Pinyin supplied upstream (as of 260503) includes Chao Tone Letters as postfix, only applicable to the isolated character presentation.
 - Character-level English glosses are still a small hand-built scaffold. Replace this with an independent character annotation source rather than fragmenting sentence translations.
 - Semantic/lexical units are the next useful learning layer: surface text, pinyin, IPA, gloss, and possibly grammatical role per word-like unit.
 

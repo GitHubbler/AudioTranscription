@@ -1,4 +1,6 @@
+#if os(macOS)
 import AppKit
+#endif
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -8,7 +10,9 @@ struct SegmentsReaderApp: App {
         WindowGroup {
             SegmentsReaderView()
         }
+#if os(macOS)
         .windowResizability(.contentSize)
+#endif
     }
 }
 
@@ -24,6 +28,7 @@ final class SegmentsReaderModel: ObservableObject {
     }
 
     func openFile() {
+#if os(macOS)
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
@@ -32,9 +37,17 @@ final class SegmentsReaderModel: ObservableObject {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         load(url)
+#endif
     }
 
-    private func load(_ url: URL) {
+    func load(_ url: URL) {
+        let hasAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if hasAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
         do {
             let data = try Data(contentsOf: url)
             let records = try JSONDecoder().decode([SegmentRecord].self, from: data)
@@ -60,6 +73,7 @@ struct ReaderSegment: Identifiable, Equatable {
 
 struct SegmentsReaderView: View {
     @StateObject private var model = SegmentsReaderModel()
+    @State private var isImporting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -73,6 +87,19 @@ struct SegmentsReaderView: View {
         }
         .padding(18)
         .frame(minWidth: 560, idealWidth: 720, minHeight: 520, idealHeight: 720)
+        .fileImporter(
+            isPresented: $isImporting,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                model.load(url)
+            case .failure(let error):
+                print(error.localizedDescription)
+            }
+        }
     }
 
     private var header: some View {
@@ -83,7 +110,7 @@ struct SegmentsReaderView: View {
 
                 Spacer()
 
-                Button(action: model.openFile) {
+                Button(action: presentFilePicker) {
                     Label("Open", systemImage: "folder")
                 }
                 .keyboardShortcut("o")
@@ -118,12 +145,20 @@ struct SegmentsReaderView: View {
                 .font(.system(size: 42, weight: .regular))
                 .foregroundStyle(.secondary)
 
-            Button(action: model.openFile) {
+            Button(action: presentFilePicker) {
                 Label("Open JSON", systemImage: "folder")
             }
             .controlSize(.large)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func presentFilePicker() {
+#if os(macOS)
+        model.openFile()
+#else
+        isImporting = true
+#endif
     }
 }
 
@@ -150,6 +185,7 @@ struct SegmentScrollView: View {
 struct SegmentGroupView: View {
     let segment: ReaderSegment
 
+    @AppStorage("SegmentsReader.ipaFontSize") private var ipaFontSize = 8.0
     @State private var showsPhoneticGrid = false
     @State private var showsIPA = true
 
@@ -225,7 +261,11 @@ struct SegmentGroupView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        PhoneticScoreView(record: segment.record, showsIPA: showsIPA)
+        if showsIPA {
+            IPAFontSizeControl(fontSize: $ipaFontSize)
+        }
+
+        PhoneticScoreView(record: segment.record, showsIPA: showsIPA, ipaFontSize: ipaFontSize)
     }
 
     private var lines: [SegmentLine] {
@@ -322,18 +362,68 @@ private extension SegmentLine.Role {
     }
 }
 
+struct IPAFontSizeControl: View {
+    @Binding var fontSize: Double
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button {
+                fontSize = max(Self.minimumSize, fontSize - 1)
+            } label: {
+                Image(systemName: "textformat.size.smaller")
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.borderless)
+            .help("Smaller IPA")
+
+            Text("IPA \(Int(fontSize)) pt")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 58, alignment: .center)
+
+            Button {
+                fontSize = min(Self.maximumSize, fontSize + 1)
+            } label: {
+                Image(systemName: "textformat.size.larger")
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.borderless)
+            .help("Larger IPA")
+        }
+        .controlSize(.small)
+        .foregroundStyle(.secondary)
+        .padding(.top, 2)
+    }
+
+    private static let minimumSize = 8.0
+    private static let maximumSize = 22.0
+}
+
 struct PhoneticScoreView: View {
     let record: SegmentRecord
     let showsIPA: Bool
+    let ipaFontSize: Double
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 50, maximum: 68), spacing: 5, alignment: .top)
-    ]
+    private var cellWidth: CGFloat {
+        guard showsIPA else { return 58 }
+        return min(150, max(58, CGFloat(ipaFontSize) * 6.4 + 18))
+    }
+
+    private var columns: [GridItem] {
+        [
+            GridItem(.adaptive(minimum: cellWidth, maximum: cellWidth + 12), spacing: 5, alignment: .top)
+        ]
+    }
 
     var body: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 7) {
             ForEach(record.phoneticCells) { cell in
-                PhoneticCellView(cell: cell, showsIPA: showsIPA)
+                PhoneticCellView(
+                    cell: cell,
+                    showsIPA: showsIPA,
+                    ipaFontSize: ipaFontSize,
+                    cellWidth: cellWidth
+                )
             }
         }
         .padding(.top, 3)
@@ -344,6 +434,8 @@ struct PhoneticScoreView: View {
 struct PhoneticCellView: View {
     let cell: PhoneticCell
     let showsIPA: Bool
+    let ipaFontSize: Double
+    let cellWidth: CGFloat
 
     var body: some View {
         VStack(spacing: 3) {
@@ -361,12 +453,12 @@ struct PhoneticCellView: View {
 
             if showsIPA {
                 Text(cell.ipa)
-                    .font(.system(size: 8, design: .rounded))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: ipaFontSize, design: .rounded))
+                    .foregroundStyle(ipaTextStyle)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.68)
-                    .frame(height: 21, alignment: .top)
+                    .frame(height: max(21, CGFloat(ipaFontSize) * 2.65), alignment: .top)
             }
 
             Text(cell.english)
@@ -377,8 +469,12 @@ struct PhoneticCellView: View {
                 .minimumScaleFactor(0.68)
                 .frame(minHeight: 31, alignment: .top)
         }
-        .frame(width: 58, alignment: .top)
+        .frame(width: cellWidth, alignment: .top)
         .textSelection(.enabled)
+    }
+
+    private var ipaTextStyle: HierarchicalShapeStyle {
+        ipaFontSize > 8 ? .secondary : .tertiary
     }
 }
 

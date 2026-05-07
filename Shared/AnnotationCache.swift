@@ -15,7 +15,7 @@ final class LocalAnnotationCache {
     func chineseCharacterUnit(surface: String, pinyin: String) -> ChineseCharacterUnit? {
         queue.sync {
             guard let unit = storage.chineseCharacterUnits[cacheKey(surface: surface, pinyin: pinyin)],
-                  unit.hasUsableCharacterIPA else {
+                  unit.isCharacterIPAUsable else {
                 return nil
             }
 
@@ -24,7 +24,7 @@ final class LocalAnnotationCache {
     }
 
     func storeChineseCharacterUnit(_ unit: ChineseCharacterUnit) {
-        guard unit.hasUsableCharacterIPA else { return }
+        guard unit.isCharacterIPAUsable else { return }
 
         queue.sync {
             storage.chineseCharacterUnits[cacheKey(surface: unit.surface, pinyin: unit.zhLatnPinyin)] = unit

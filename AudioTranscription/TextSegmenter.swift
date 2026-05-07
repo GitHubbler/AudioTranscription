@@ -176,7 +176,7 @@ struct TextSegmenter {
                 nearCharacterOffset: approximateOffset,
                 in: text,
                 range: range,
-                allowApproximateCJKBoundary: hint.confidence >= 0.45 || hint.duration >= 0.24
+                isAllowingApproximateCJKBoundary: hint.confidence >= 0.45 || hint.duration >= 0.24
             )
 
             if let boundary {
@@ -238,7 +238,7 @@ struct TextSegmenter {
         nearCharacterOffset offset: Int,
         in text: String,
         range: Range<String.Index>,
-        allowApproximateCJKBoundary: Bool
+        isAllowingApproximateCJKBoundary: Bool
     ) -> String.Index? {
         let rangeLength = text.distance(from: range.lowerBound, to: range.upperBound)
         guard rangeLength >= 8 else { return nil }
@@ -264,7 +264,7 @@ struct TextSegmenter {
             return candidate
         }
 
-        guard allowApproximateCJKBoundary else { return nil }
+        guard isAllowingApproximateCJKBoundary else { return nil }
         guard isReasonableSplit(approximateIndex, in: text, range: range) else { return nil }
         guard !isInsideProtectedToken(approximateIndex, in: text, range: range) else { return nil }
         return approximateIndex

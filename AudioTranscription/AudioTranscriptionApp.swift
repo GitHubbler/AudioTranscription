@@ -55,15 +55,15 @@ final class TranscriptionModel: ObservableObject {
     private var pendingTranslation: PendingTranslation?
     private let annotationCache = LocalAnnotationCache.shared
 
-    var canOpen: Bool {
+    var isAbleToOpen: Bool {
         state != .transcribing
     }
 
-    var canStart: Bool {
+    var isAbleToStart: Bool {
         selectedAudioURL != nil && state != .transcribing
     }
 
-    var canSave: Bool {
+    var isAbleToSave: Bool {
         switch editorMode {
         case .text:
             !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -72,20 +72,20 @@ final class TranscriptionModel: ObservableObject {
         }
     }
 
-    var canSegment: Bool {
+    var isAbleToSegment: Bool {
         !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && state != .transcribing
             && editorMode == .text
     }
 
-    var canTranslate: Bool {
+    var isAbleToTranslate: Bool {
         !transcriptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && state != .transcribing
             && !isTranslating
     }
 
     func openFile() {
-        guard canOpen else { return }
+        guard isAbleToOpen else { return }
 
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.audio, .plainText]
@@ -129,7 +129,7 @@ final class TranscriptionModel: ObservableObject {
     }
 
     func startTranscription() {
-        guard canStart, let fileURL = selectedAudioURL else { return }
+        guard isAbleToStart, let fileURL = selectedAudioURL else { return }
 
         transcriptionTask?.cancel()
         setDraftText("")
@@ -165,7 +165,7 @@ final class TranscriptionModel: ObservableObject {
     }
 
     func segmentCurrentText() {
-        guard canSegment else { return }
+        guard isAbleToSegment else { return }
 
         segmentationTask?.cancel()
         let text = transcriptText
@@ -191,7 +191,7 @@ final class TranscriptionModel: ObservableObject {
     }
 
     func saveTranscription() {
-        guard canSave else { return }
+        guard isAbleToSave else { return }
 
         switch editorMode {
         case .text:
@@ -202,7 +202,7 @@ final class TranscriptionModel: ObservableObject {
     }
 
     private func saveTextDraft() {
-        guard canSave else { return }
+        guard isAbleToSave else { return }
 
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
@@ -227,7 +227,7 @@ final class TranscriptionModel: ObservableObject {
     }
 
     private func saveJSONDraft() {
-        guard canSave else { return }
+        guard isAbleToSave else { return }
 
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
@@ -248,7 +248,7 @@ final class TranscriptionModel: ObservableObject {
     }
 
     func translateCurrentSegments() {
-        guard canTranslate else { return }
+        guard isAbleToTranslate else { return }
 
         guard let pair = currentTranslationPair else {
             statusText = "Translation is available for English and Chinese source text"
@@ -448,7 +448,7 @@ final class TranscriptionModel: ObservableObject {
         audioHintTask?.cancel()
         audioHintTask = Task { [weak self] in
             guard let self else { return }
-            await self.extractAudioHints(for: url, shouldUpdateStatus: true)
+            await self.extractAudioHints(for: url, isToUpdateStatus: true)
         }
     }
 
@@ -459,10 +459,10 @@ final class TranscriptionModel: ObservableObject {
         }
 
         guard let selectedAudioURL, audioDuration == nil else { return }
-        await extractAudioHints(for: selectedAudioURL, shouldUpdateStatus: false)
+        await extractAudioHints(for: selectedAudioURL, isToUpdateStatus: false)
     }
 
-    private func extractAudioHints(for url: URL, shouldUpdateStatus: Bool) async {
+    private func extractAudioHints(for url: URL, isToUpdateStatus: Bool) async {
         do {
             let extractor = audioHintExtractor
             let analysis = try await Task.detached(priority: .userInitiated) {
@@ -474,7 +474,7 @@ final class TranscriptionModel: ObservableObject {
             audioBoundaryHints = analysis.hints
             audioHintTask = nil
 
-            if shouldUpdateStatus, state != .transcribing {
+            if isToUpdateStatus, state != .transcribing {
                 statusText = state == .completed && !transcriptText.isEmpty
                     ? draftReadyStatus
                     : "Ready: \(url.lastPathComponent)\(audioHintSummary)"
@@ -486,7 +486,7 @@ final class TranscriptionModel: ObservableObject {
             audioHintTask = nil
             audioDuration = nil
             audioBoundaryHints = []
-            if shouldUpdateStatus, state != .transcribing {
+            if isToUpdateStatus, state != .transcribing {
                 statusText = "Ready: \(url.lastPathComponent) (audio hints unavailable)"
             }
         }
@@ -539,7 +539,7 @@ struct ContentView: View {
                 }
             }
             .pickerStyle(.menu)
-            .disabled(!model.canOpen)
+            .disabled(!model.isAbleToOpen)
 
             Picker("Editor", selection: $model.editorMode) {
                 ForEach(TranscriptionModel.EditorMode.allCases) { mode in
@@ -561,31 +561,31 @@ struct ContentView: View {
                 Button(action: model.openFile) {
                     Label("Open", systemImage: "folder")
                 }
-                .disabled(!model.canOpen)
+                .disabled(!model.isAbleToOpen)
                 .keyboardShortcut("o")
 
                 Button(action: model.startTranscription) {
                     Label("Start", systemImage: "play.fill")
                 }
-                .disabled(!model.canStart)
+                .disabled(!model.isAbleToStart)
                 .keyboardShortcut(.return)
 
                 Button(action: model.segmentCurrentText) {
                     Label("Segment", systemImage: "text.line.first.and.arrowtriangle.forward")
                 }
-                .disabled(!model.canSegment)
+                .disabled(!model.isAbleToSegment)
 
                 Button(action: model.translateCurrentSegments) {
                     Label("Translate", systemImage: "translate")
                 }
-                .disabled(!model.canTranslate)
+                .disabled(!model.isAbleToTranslate)
 
                 Spacer()
 
                 Button(action: model.saveTranscription) {
                     Label("Save", systemImage: "square.and.arrow.down")
                 }
-                .disabled(!model.canSave)
+                .disabled(!model.isAbleToSave)
                 .keyboardShortcut("s")
             }
         }

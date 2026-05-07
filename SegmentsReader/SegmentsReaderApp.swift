@@ -23,7 +23,7 @@ final class SegmentsReaderModel: ObservableObject {
     @Published private(set) var statusText = "Open segmented JSON"
     @Published private(set) var errorText: String?
 
-    var hasSegments: Bool {
+    var isNotEmptySegments: Bool {
         !segments.isEmpty
     }
 
@@ -79,7 +79,7 @@ struct SegmentsReaderView: View {
         VStack(alignment: .leading, spacing: 14) {
             header
 
-            if model.hasSegments {
+            if model.isNotEmptySegments {
                 SegmentScrollView(segments: model.segments)
             } else {
                 emptyState
@@ -117,7 +117,7 @@ struct SegmentsReaderView: View {
             }
 
             HStack(spacing: 8) {
-                Label(model.statusText, systemImage: model.hasSegments ? "text.page" : "doc")
+                Label(model.statusText, systemImage: model.isNotEmptySegments ? "text.page" : "doc")
                     .font(.caption)
                     .lineLimit(1)
 
@@ -192,7 +192,7 @@ struct SegmentGroupView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 5) {
-                if showsPhoneticGrid, segment.record.canShowPhoneticGrid {
+                if showsPhoneticGrid, segment.record.isAbleToShowPhoneticGrid {
                     expandedContent
                 } else {
                     normalContent
@@ -202,7 +202,7 @@ struct SegmentGroupView: View {
 
             Spacer(minLength: 8)
 
-            if segment.record.canShowPhoneticGrid {
+            if segment.record.isAbleToShowPhoneticGrid {
                 VStack(spacing: 8) {
                     Button {
                         showsPhoneticGrid.toggle()
@@ -265,7 +265,7 @@ struct SegmentGroupView: View {
             IPAFontSizeControl(fontSize: $ipaFontSize)
         }
 
-        PhoneticScoreView(record: segment.record, showsIPA: showsIPA, ipaFontSize: ipaFontSize)
+        PhoneticScoreView(record: segment.record, isShowingIPA: showsIPA, ipaFontSize: ipaFontSize)
     }
 
     private var lines: [SegmentLine] {
@@ -401,11 +401,11 @@ struct IPAFontSizeControl: View {
 
 struct PhoneticScoreView: View {
     let record: SegmentRecord
-    let showsIPA: Bool
+    let isShowingIPA: Bool
     let ipaFontSize: Double
 
     private var cellWidth: CGFloat {
-        guard showsIPA else { return 58 }
+        guard isShowingIPA else { return 58 }
         return min(150, max(58, CGFloat(ipaFontSize) * 6.4 + 18))
     }
 
@@ -420,7 +420,7 @@ struct PhoneticScoreView: View {
             ForEach(record.phoneticCells) { cell in
                 PhoneticCellView(
                     cell: cell,
-                    showsIPA: showsIPA,
+                    isShowingIPA: isShowingIPA,
                     ipaFontSize: ipaFontSize,
                     cellWidth: cellWidth
                 )
@@ -433,7 +433,7 @@ struct PhoneticScoreView: View {
 
 struct PhoneticCellView: View {
     let cell: PhoneticCell
-    let showsIPA: Bool
+    let isShowingIPA: Bool
     let ipaFontSize: Double
     let cellWidth: CGFloat
 
@@ -451,7 +451,7 @@ struct PhoneticCellView: View {
                 .minimumScaleFactor(0.72)
                 .frame(height: 25, alignment: .top)
 
-            if showsIPA {
+            if isShowingIPA {
                 Text(cell.ipa)
                     .font(.system(size: ipaFontSize, design: .rounded))
                     .foregroundStyle(ipaTextStyle)
@@ -489,7 +489,7 @@ struct PhoneticCell: Identifiable, Equatable {
 }
 
 private extension SegmentRecord {
-    var canShowPhoneticGrid: Bool {
+    var isAbleToShowPhoneticGrid: Bool {
         !zhText.trimmedForDisplay.isEmpty && !phoneticCells.isEmpty
     }
 
@@ -530,7 +530,7 @@ private extension SegmentRecord {
 
 private extension ChineseCharacterUnit {
     var displayIPA: String {
-        hasUsableCharacterIPA ? ipa : MandarinIPAConverter.ipa(fromPinyin: zhLatnPinyin)
+        isCharacterIPAUsable ? ipa : MandarinIPAConverter.ipa(fromPinyin: zhLatnPinyin)
     }
 }
 

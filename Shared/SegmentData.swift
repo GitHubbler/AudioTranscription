@@ -182,7 +182,7 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         let lexicalUnits = zhLexicalUnits.isEmpty
             ? ChineseLexicalAnnotator.units(from: zhText)
             : zhLexicalUnits
-        let characterUnits = zhCharacterUnits.needsCharacterIPARefresh
+        let characterUnits = zhCharacterUnits.isCharacterIPARefreshNeeded
             ? ChineseCharacterAnnotator.units(from: zhText, cache: cache)
             : zhCharacterUnits
         let pinyin = zhLatnPinyin.isEmpty
@@ -292,14 +292,14 @@ struct ChineseCharacterUnit: Codable, Equatable, Sendable {
 }
 
 extension ChineseCharacterUnit {
-    var hasUsableCharacterIPA: Bool {
+    var isCharacterIPAUsable: Bool {
         !ipa.isEmpty && ipa != TemporaryIPAAnnotator.placeholder
     }
 }
 
 private extension [ChineseCharacterUnit] {
-    var needsCharacterIPARefresh: Bool {
-        isEmpty || contains { !$0.hasUsableCharacterIPA }
+    var isCharacterIPARefreshNeeded: Bool {
+        isEmpty || contains { !$0.isCharacterIPAUsable }
     }
 }
 

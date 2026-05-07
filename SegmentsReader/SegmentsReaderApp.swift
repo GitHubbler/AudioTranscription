@@ -64,6 +64,22 @@ final class SegmentsReaderModel: ObservableObject {
     }
 }
 
+@MainActor
+final class PopupModel: ObservableObject {
+    @Published var activeCell: PhoneticCell?
+    
+    @AppStorage("PopupPosition.x") var positionX: Double = 300
+    @AppStorage("PopupPosition.y") var positionY: Double = 150
+    
+    var position: CGPoint {
+        get { CGPoint(x: positionX, y: positionY) }
+        set {
+            positionX = Double(newValue.x)
+            positionY = Double(newValue.y)
+        }
+    }
+}
+
 struct ReaderSegment: Identifiable, Equatable {
     let number: Int
     let record: SegmentRecord
@@ -73,6 +89,7 @@ struct ReaderSegment: Identifiable, Equatable {
 
 struct SegmentsReaderView: View {
     @StateObject private var model = SegmentsReaderModel()
+    @StateObject private var popupModel = PopupModel()
     @State private var isImporting = false
 
     var body: some View {
@@ -87,6 +104,10 @@ struct SegmentsReaderView: View {
         }
         .padding(18)
         .frame(minWidth: 560, idealWidth: 720, minHeight: 520, idealHeight: 720)
+        .overlay {
+            CellPopupView()
+        }
+        .environmentObject(popupModel)
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.json],
@@ -436,6 +457,9 @@ struct PhoneticCellView: View {
     let isShowingIPA: Bool
     let ipaFontSize: Double
     let cellWidth: CGFloat
+    var isPopup: Bool = false
+
+    @EnvironmentObject private var popupModel: PopupModel
 
     var body: some View {
         VStack(spacing: 3) {
@@ -470,6 +494,14 @@ struct PhoneticCellView: View {
                 .frame(minHeight: 31, alignment: .top)
         }
         .frame(width: cellWidth, alignment: .top)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isPopup {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    popupModel.activeCell = cell
+                }
+            }
+        }
         .textSelection(.enabled)
     }
 
@@ -541,6 +573,63 @@ private extension String {
 
 }
 
+struct CellPopupView: View {
+    @EnvironmentObject var popupModel: PopupModel
+    @State private var dragOffset: CGSize = .zero
+    @State private var hasHovered = false
+
+    var body: some View {
+        if let cell = popupModel.activeCell {
+            PhoneticCellView(
+                cell: cell,
+                isShowingIPA: true,
+                ipaFontSize: 16.0,
+                cellWidth: 100,
+                isPopup: true
+            )
+            .scaleEffect(1.4)
+            .padding(24)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+            .position(
+                x: popupModel.position.x + dragOffset.width,
+                y: popupModel.position.y + dragOffset.height
+            )
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        popupModel.position.x += value.translation.width
+                        popupModel.position.y += value.translation.height
+                        dragOffset = .zero
+                    }
+            )
+            .onTapGesture {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    popupModel.activeCell = nil
+                }
+            }
+            .onHover { isHovering in
+                if isHovering {
+                    hasHovered = true
+                } else if hasHovered {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        popupModel.activeCell = nil
+                    }
+                    hasHovered = false
+                }
+            }
+            .onAppear {
+                hasHovered = false
+            }
+            .transition(.scale(scale: 0.8).combined(with: .opacity))
+        }
+    }
+}
+
 #Preview {
     SegmentScrollView(segments: [
         ReaderSegment(
@@ -563,4 +652,5 @@ private extension String {
         )
     ])
     .padding()
+    .environmentObject(PopupModel())
 }

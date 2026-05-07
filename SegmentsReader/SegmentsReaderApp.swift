@@ -462,6 +462,15 @@ struct PhoneticCellView: View {
     @EnvironmentObject private var popupModel: PopupModel
 
     var body: some View {
+        if isPopup {
+            content
+        } else {
+            content
+                .textSelection(.enabled)
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 3) {
             Text(cell.hanzi)
                 .font(.system(size: 23, weight: .semibold))
@@ -502,7 +511,6 @@ struct PhoneticCellView: View {
                 }
             }
         }
-        .textSelection(.enabled)
     }
 
     private var ipaTextStyle: HierarchicalShapeStyle {
@@ -580,18 +588,37 @@ struct CellPopupView: View {
 
     var body: some View {
         if let cell = popupModel.activeCell {
-            PhoneticCellView(
-                cell: cell,
-                isShowingIPA: true,
-                ipaFontSize: 16.0,
-                cellWidth: 100,
-                isPopup: true
-            )
-            .scaleEffect(1.4)
-            .padding(24)
-            .background(.regularMaterial)
+            ZStack(alignment: .topTrailing) {
+                PhoneticCellView(
+                    cell: cell,
+                    isShowingIPA: true,
+                    ipaFontSize: 16.0,
+                    cellWidth: 100,
+                    isPopup: true
+                )
+                .padding(.top, 16)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
+
+                Button {
+                    closePopup()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.tertiary)
+                        .padding(8)
+                }
+                .buttonStyle(.plain)
+            }
+            .background(Color.primary.opacity(0.04))
+            .background(.background)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+            .scaleEffect(2.0)
             .position(
                 x: popupModel.position.x + dragOffset.width,
                 y: popupModel.position.y + dragOffset.height
@@ -608,17 +635,13 @@ struct CellPopupView: View {
                     }
             )
             .onTapGesture {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    popupModel.activeCell = nil
-                }
+                closePopup()
             }
             .onHover { isHovering in
                 if isHovering {
                     hasHovered = true
                 } else if hasHovered {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        popupModel.activeCell = nil
-                    }
+                    closePopup()
                     hasHovered = false
                 }
             }
@@ -626,6 +649,12 @@ struct CellPopupView: View {
                 hasHovered = false
             }
             .transition(.scale(scale: 0.8).combined(with: .opacity))
+        }
+    }
+
+    private func closePopup() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            popupModel.activeCell = nil
         }
     }
 }

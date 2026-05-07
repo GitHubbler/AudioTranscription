@@ -67,6 +67,7 @@ final class SegmentsReaderModel: ObservableObject {
 @MainActor
 final class PopupModel: ObservableObject {
     @Published var activeCell: PhoneticCell?
+    @Published var activeSegment: ReaderSegment?
     
     @AppStorage("PopupPosition.x") var positionX: Double = 300
     @AppStorage("PopupPosition.y") var positionY: Double = 150
@@ -76,6 +77,55 @@ final class PopupModel: ObservableObject {
         set {
             positionX = Double(newValue.x)
             positionY = Double(newValue.y)
+        }
+    }
+    
+    var allSegments: [ReaderSegment] = []
+    var currentGridColumns: Int = 1
+    
+    func navigate(dx: Int, dy: Int) {
+        guard let cell = activeCell, let segment = activeSegment else { return }
+        
+        let cells = segment.record.phoneticCells
+        guard !cells.isEmpty else { return }
+        
+        var newIndex = cell.index
+        
+        if dx != 0 {
+            newIndex += dx
+        }
+        if dy != 0 {
+            newIndex += dy * max(1, currentGridColumns)
+        }
+        
+        if newIndex >= 0 && newIndex < cells.count {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                activeCell = cells[newIndex]
+            }
+        } else {
+            if newIndex < 0 {
+                if let segIndex = allSegments.firstIndex(where: { $0.id == segment.id }), segIndex > 0 {
+                    let prevSegment = allSegments[segIndex - 1]
+                    let prevCells = prevSegment.record.phoneticCells
+                    if !prevCells.isEmpty {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            activeSegment = prevSegment
+                            activeCell = prevCells.last
+                        }
+                    }
+                }
+            } else {
+                if let segIndex = allSegments.firstIndex(where: { $0.id == segment.id }), segIndex < allSegments.count - 1 {
+                    let nextSegment = allSegments[segIndex + 1]
+                    let nextCells = nextSegment.record.phoneticCells
+                    if !nextCells.isEmpty {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            activeSegment = nextSegment
+                            activeCell = nextCells.first
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -108,6 +158,12 @@ struct SegmentsReaderView: View {
             CellPopupView()
         }
         .environmentObject(popupModel)
+        .onChange(of: model.segments) { newValue in
+            popupModel.allSegments = newValue
+        }
+        .onAppear {
+            popupModel.allSegments = model.segments
+        }
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: [.json],
@@ -286,7 +342,7 @@ struct SegmentGroupView: View {
             IPAFontSizeControl(fontSize: $ipaFontSize)
         }
 
-        PhoneticScoreView(record: segment.record, isShowingIPA: showsIPA, ipaFontSize: ipaFontSize)
+        PhoneticScoreView(segment: segment, isShowingIPA: showsIPA, ipaFontSize: ipaFontSize)
     }
 
     private var lines: [SegmentLine] {
@@ -421,9 +477,11 @@ struct IPAFontSizeControl: View {
 }
 
 struct PhoneticScoreView: View {
-    let record: SegmentRecord
+    let segment: ReaderSegment
     let isShowingIPA: Bool
     let ipaFontSize: Double
+    
+    @EnvironmentObject private var popupModel: PopupModel
 
     private var cellWidth: CGFloat {
         guard isShowingIPA else { return 58 }
@@ -438,9 +496,10 @@ struct PhoneticScoreView: View {
 
     var body: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 7) {
-            ForEach(record.phoneticCells) { cell in
+            ForEach(segment.record.phoneticCells) { cell in
                 PhoneticCellView(
                     cell: cell,
+                    segment: segment,
                     isShowingIPA: isShowingIPA,
                     ipaFontSize: ipaFontSize,
                     cellWidth: cellWidth
@@ -449,11 +508,24 @@ struct PhoneticScoreView: View {
         }
         .padding(.top, 3)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { updateColumns(width: proxy.size.width) }
+                    .onChange(of: proxy.size.width) { updateColumns(width: $0) }
+            }
+        )
+    }
+    
+    private func updateColumns(width: CGFloat) {
+        let cols = max(1, Int((width + 5) / (cellWidth + 5)))
+        popupModel.currentGridColumns = cols
     }
 }
 
 struct PhoneticCellView: View {
     let cell: PhoneticCell
+    var segment: ReaderSegment? = nil
     let isShowingIPA: Bool
     let ipaFontSize: Double
     let cellWidth: CGFloat
@@ -505,8 +577,9 @@ struct PhoneticCellView: View {
         .frame(width: cellWidth, alignment: .top)
         .contentShape(Rectangle())
         .onTapGesture {
-            if !isPopup {
+            if !isPopup, let segment = segment {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    popupModel.activeSegment = segment
                     popupModel.activeCell = cell
                 }
             }
@@ -528,7 +601,7 @@ struct PhoneticCell: Identifiable, Equatable {
     var id: Int { index }
 }
 
-private extension SegmentRecord {
+extension SegmentRecord {
     var isAbleToShowPhoneticGrid: Bool {
         !zhText.trimmedForDisplay.isEmpty && !phoneticCells.isEmpty
     }
@@ -568,7 +641,7 @@ private extension SegmentRecord {
     }
 }
 
-private extension ChineseCharacterUnit {
+extension ChineseCharacterUnit {
     var displayIPA: String {
         isCharacterIPAUsable ? ipa : MandarinIPAConverter.ipa(fromPinyin: zhLatnPinyin)
     }
@@ -649,6 +722,15 @@ struct CellPopupView: View {
                 hasHovered = false
             }
             .transition(.scale(scale: 0.8).combined(with: .opacity))
+            .background(
+                Group {
+                    Button("") { popupModel.navigate(dx: -1, dy: 0) }.keyboardShortcut(.leftArrow, modifiers: [])
+                    Button("") { popupModel.navigate(dx: 1, dy: 0) }.keyboardShortcut(.rightArrow, modifiers: [])
+                    Button("") { popupModel.navigate(dx: 0, dy: -1) }.keyboardShortcut(.upArrow, modifiers: [])
+                    Button("") { popupModel.navigate(dx: 0, dy: 1) }.keyboardShortcut(.downArrow, modifiers: [])
+                }
+                .opacity(0)
+            )
         }
     }
 

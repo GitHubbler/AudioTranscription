@@ -661,76 +661,133 @@ struct CellPopupView: View {
 
     var body: some View {
         if let cell = popupModel.activeCell {
-            ZStack(alignment: .topTrailing) {
-                PhoneticCellView(
-                    cell: cell,
-                    isShowingIPA: true,
-                    ipaFontSize: 16.0,
-                    cellWidth: 100,
-                    isPopup: true
-                )
-                .padding(.top, 16)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+            ZStack {
+                // 1. The Main Popup
+                ZStack(alignment: .topTrailing) {
+                    PhoneticCellView(
+                        cell: cell,
+                        isShowingIPA: true,
+                        ipaFontSize: 16.0,
+                        cellWidth: 100,
+                        isPopup: true
+                    )
+                    .padding(.top, 16)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 24)
 
-                Button {
-                    closePopup()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.tertiary)
-                        .padding(8)
+                    Button {
+                        closePopup()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.tertiary)
+                            .padding(8)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
-            .background(Color.primary.opacity(0.04))
-            .background(.background)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
-            .scaleEffect(2.0)
-            .position(
-                x: popupModel.position.x + dragOffset.width,
-                y: popupModel.position.y + dragOffset.height
-            )
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        dragOffset = value.translation
-                    }
-                    .onEnded { value in
-                        popupModel.position.x += value.translation.width
-                        popupModel.position.y += value.translation.height
-                        dragOffset = .zero
-                    }
-            )
-            .onTapGesture {
-                closePopup()
-            }
-            .onHover { isHovering in
-                if isHovering {
-                    hasHovered = true
-                } else if hasHovered {
+                .background(Color.primary.opacity(0.04))
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.12), radius: 12, x: 0, y: 6)
+                .scaleEffect(2.0)
+                .position(
+                    x: popupModel.position.x + dragOffset.width,
+                    y: popupModel.position.y + dragOffset.height
+                )
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            dragOffset = value.translation
+                        }
+                        .onEnded { value in
+                            popupModel.position.x += value.translation.width
+                            popupModel.position.y += value.translation.height
+                            dragOffset = .zero
+                        }
+                )
+                .onTapGesture {
                     closePopup()
+                }
+                .onHover { isHovering in
+                    if isHovering {
+                        hasHovered = true
+                    } else if hasHovered {
+                        closePopup()
+                        hasHovered = false
+                    }
+                }
+                .onAppear {
                     hasHovered = false
                 }
-            }
-            .onAppear {
-                hasHovered = false
-            }
-            .transition(.scale(scale: 0.8).combined(with: .opacity))
-            .background(
-                Group {
-                    Button("") { popupModel.navigate(dx: -1, dy: 0) }.keyboardShortcut(.leftArrow, modifiers: [])
-                    Button("") { popupModel.navigate(dx: 1, dy: 0) }.keyboardShortcut(.rightArrow, modifiers: [])
-                    Button("") { popupModel.navigate(dx: 0, dy: -1) }.keyboardShortcut(.upArrow, modifiers: [])
-                    Button("") { popupModel.navigate(dx: 0, dy: 1) }.keyboardShortcut(.downArrow, modifiers: [])
+                .transition(.scale(scale: 0.8).combined(with: .opacity))
+                .background(
+                    Group {
+                        Button("") { popupModel.navigate(dx: -1, dy: 0) }.keyboardShortcut(.leftArrow, modifiers: [])
+                        Button("") { popupModel.navigate(dx: 1, dy: 0) }.keyboardShortcut(.rightArrow, modifiers: [])
+                        Button("") { popupModel.navigate(dx: 0, dy: -1) }.keyboardShortcut(.upArrow, modifiers: [])
+                        Button("") { popupModel.navigate(dx: 0, dy: 1) }.keyboardShortcut(.downArrow, modifiers: [])
+                    }
+                    .opacity(0)
+                )
+                
+                // 2. The Navigation Toolbar
+                VStack {
+                    Spacer()
+                    
+                    HStack(spacing: 36) {
+                        Button(action: { popupModel.navigate(dx: -1, dy: 0) }) {
+                            VStack {
+                                Image(systemName: "arrow.left.square.fill")
+                                    .font(.system(size: 38))
+                                Text("Left")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: { popupModel.navigate(dx: 0, dy: -1) }) {
+                            VStack {
+                                Image(systemName: "arrow.up.square.fill")
+                                    .font(.system(size: 38))
+                                Text("Up")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: { popupModel.navigate(dx: 0, dy: 1) }) {
+                            VStack {
+                                Image(systemName: "arrow.down.square.fill")
+                                    .font(.system(size: 38))
+                                Text("Down")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(action: { popupModel.navigate(dx: 1, dy: 0) }) {
+                            VStack {
+                                Image(systemName: "arrow.right.square.fill")
+                                    .font(.system(size: 38))
+                                Text("Right")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .padding(.bottom, 24)
+                    .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
                 }
-                .opacity(0)
-            )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
     }
 

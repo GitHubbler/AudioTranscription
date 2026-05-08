@@ -128,6 +128,16 @@ final class PopupModel: ObservableObject {
             }
         }
     }
+    
+    func navigateToExtreme(isFirst: Bool) {
+        guard let segment = activeSegment else { return }
+        let cells = segment.record.phoneticCells
+        guard !cells.isEmpty else { return }
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            activeCell = isFirst ? cells.first : cells.last
+        }
+    }
 }
 
 struct ReaderSegment: Identifiable, Equatable {
@@ -657,7 +667,6 @@ private extension String {
 struct CellPopupView: View {
     @EnvironmentObject var popupModel: PopupModel
     @State private var dragOffset: CGSize = .zero
-    @State private var hasHovered = false
 
     var body: some View {
         if let cell = popupModel.activeCell {
@@ -674,16 +683,6 @@ struct CellPopupView: View {
                     .padding(.top, 16)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 24)
-
-                    Button {
-                        closePopup()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.tertiary)
-                            .padding(8)
-                    }
-                    .buttonStyle(.plain)
                 }
                 .background(Color.primary.opacity(0.04))
                 .background(.background)
@@ -712,17 +711,6 @@ struct CellPopupView: View {
                 .onTapGesture {
                     closePopup()
                 }
-                .onHover { isHovering in
-                    if isHovering {
-                        hasHovered = true
-                    } else if hasHovered {
-                        closePopup()
-                        hasHovered = false
-                    }
-                }
-                .onAppear {
-                    hasHovered = false
-                }
                 .transition(.scale(scale: 0.8).combined(with: .opacity))
                 .background(
                     Group {
@@ -730,6 +718,8 @@ struct CellPopupView: View {
                         Button("") { popupModel.navigate(dx: 1, dy: 0) }.keyboardShortcut(.rightArrow, modifiers: [])
                         Button("") { popupModel.navigate(dx: 0, dy: -1) }.keyboardShortcut(.upArrow, modifiers: [])
                         Button("") { popupModel.navigate(dx: 0, dy: 1) }.keyboardShortcut(.downArrow, modifiers: [])
+                        Button("") { popupModel.navigateToExtreme(isFirst: true) }.keyboardShortcut(.leftArrow, modifiers: [.command])
+                        Button("") { popupModel.navigateToExtreme(isFirst: false) }.keyboardShortcut(.rightArrow, modifiers: [.command])
                     }
                     .opacity(0)
                 )
@@ -738,11 +728,21 @@ struct CellPopupView: View {
                 VStack {
                     Spacer()
                     
-                    HStack(spacing: 36) {
+                    HStack(spacing: 16) {
+                        Button(action: { popupModel.navigateToExtreme(isFirst: true) }) {
+                            VStack {
+                                Image(systemName: "arrow.backward.to.line")
+                                    .font(.system(size: 32))
+                                Text("First")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
                         Button(action: { popupModel.navigate(dx: -1, dy: 0) }) {
                             VStack {
                                 Image(systemName: "arrow.left.square.fill")
-                                    .font(.system(size: 38))
+                                    .font(.system(size: 32))
                                 Text("Left")
                                     .font(.caption)
                             }
@@ -752,7 +752,7 @@ struct CellPopupView: View {
                         Button(action: { popupModel.navigate(dx: 0, dy: -1) }) {
                             VStack {
                                 Image(systemName: "arrow.up.square.fill")
-                                    .font(.system(size: 38))
+                                    .font(.system(size: 32))
                                 Text("Up")
                                     .font(.caption)
                             }
@@ -762,7 +762,7 @@ struct CellPopupView: View {
                         Button(action: { popupModel.navigate(dx: 0, dy: 1) }) {
                             VStack {
                                 Image(systemName: "arrow.down.square.fill")
-                                    .font(.system(size: 38))
+                                    .font(.system(size: 32))
                                 Text("Down")
                                     .font(.caption)
                             }
@@ -772,8 +772,32 @@ struct CellPopupView: View {
                         Button(action: { popupModel.navigate(dx: 1, dy: 0) }) {
                             VStack {
                                 Image(systemName: "arrow.right.square.fill")
-                                    .font(.system(size: 38))
+                                    .font(.system(size: 32))
                                 Text("Right")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: { popupModel.navigateToExtreme(isFirst: false) }) {
+                            VStack {
+                                Image(systemName: "arrow.forward.to.line")
+                                    .font(.system(size: 32))
+                                Text("Last")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Divider()
+                            .frame(height: 32)
+                            .padding(.horizontal, 4)
+                        
+                        Button(action: { closePopup() }) {
+                            VStack {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 32))
+                                Text("Close")
                                     .font(.caption)
                             }
                         }

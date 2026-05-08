@@ -552,8 +552,13 @@ struct PhoneticCellView: View {
         }
     }
 
+    private var isActiveCell: Bool {
+        !isPopup && popupModel.activeSegment?.id == segment?.id && popupModel.activeCell?.index == cell.index
+    }
+
+    @ViewBuilder
     private var content: some View {
-        VStack(spacing: 3) {
+        let base = VStack(spacing: 3) {
             Text(cell.hanzi)
                 .font(.system(size: 23, weight: .semibold))
                 .frame(height: 27, alignment: .center)
@@ -593,6 +598,27 @@ struct PhoneticCellView: View {
                     popupModel.activeCell = cell
                 }
             }
+        }
+        
+        if isActiveCell {
+            base
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(.background)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.primary.opacity(0.04))
+                    }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(Color.primary.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.12), radius: 6, x: 0, y: 3)
+                    .padding(-4)
+                )
+                .zIndex(1)
+        } else {
+            base
         }
     }
 

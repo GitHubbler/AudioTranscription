@@ -7,23 +7,37 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		011AFB3EE473B0FA54E08795 /* IPAFontSizeControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A56CE8740F4B4F54C299B8EC /* IPAFontSizeControl.swift */; };
+		2872DFAF0CF8E232FEF90557 /* SegmentsReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B3733165272E327915FBCF7 /* SegmentsReaderView.swift */; };
 		2DA95DFC61F02E38CCB05538 /* MandarinIPAConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042556A762FD788DD60FB33 /* MandarinIPAConverter.swift */; };
 		2F412F196790D3C79B6815E6 /* TranscriptionLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */; };
 		2F5E107DC98AF06F5D3DA0F2 /* ChinesePhonetics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C64E39A3DB2AC14DF67D2B /* ChinesePhonetics.swift */; };
 		3FED8BFDD8E906B9E4498774 /* ChinesePhonetics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C64E39A3DB2AC14DF67D2B /* ChinesePhonetics.swift */; };
 		4A53F123591C54227170617A /* TextSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335D90992AED84DD03E885F4 /* TextSegmenter.swift */; };
+		54C59BF548AAA7B1F770F947 /* PhoneticCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6D65D7ECBEFDC004B04FA4 /* PhoneticCell.swift */; };
 		5842EB509B744A309DB7E928 /* AnnotationCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137C360F7979A5B7DEA7E113 /* AnnotationCache.swift */; };
 		6A216E1FE08AD21852046E1B /* AnnotationCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137C360F7979A5B7DEA7E113 /* AnnotationCache.swift */; };
 		776EC4F820818FEC2D655EFE /* SegmentsReaderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81674886E230629A7D7ABB94 /* SegmentsReaderApp.swift */; };
 		89C9608C2CC3632F3D08D33A /* SegmentData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F88B9E9E14BDBA80CAF03A /* SegmentData.swift */; };
+		8A755A57A1A01C13AC067B8E /* ChineseCharacterUnit+IPA.swift in Sources */ = {isa = PBXBuildFile; fileRef = A098D1A9AA1AC2699476EA53 /* ChineseCharacterUnit+IPA.swift */; };
 		8A7F531926C5C1D3C505B97B /* SegmentData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F88B9E9E14BDBA80CAF03A /* SegmentData.swift */; };
+		9B82066B31F8CB6E102418F5 /* SegmentLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944DA89FE84DF0921C4D9910 /* SegmentLine.swift */; };
+		9D7DEFFB9B716078B3702D2E /* SegmentsReaderModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A83F94D18142588F3AF0B7B /* SegmentsReaderModel.swift */; };
+		9EA67195450744B91DE65579 /* SegmentRecord+Phonetics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27A8D8CCD195A4BBEBF5D777 /* SegmentRecord+Phonetics.swift */; };
+		A18E5DA875E9D6B140CCB4EA /* String+Trim.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9222655B7EB6AD2934C321E /* String+Trim.swift */; };
 		A2619BC6EA0C6F6D4A66AE7F /* TemporaryIPAAnnotator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5174EAE9345E7FFFDC335CEE /* TemporaryIPAAnnotator.swift */; };
+		B6E267AF5D7FC3156FC644D9 /* PhoneticScoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9A4312CA451534DFEE797F0 /* PhoneticScoreView.swift */; };
 		B96C5BF88030A49B4B46D298 /* AudioBoundaryHintExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 543236A632C912FD8C705100 /* AudioBoundaryHintExtractor.swift */; };
+		B9F01A330227DA20AE0CDBE1 /* CellPopupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D0E5FB6F00279247A6C73D /* CellPopupView.swift */; };
 		BB092F79CDB66CCC4BE08AEF /* TextSegmenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71321F0C2695195E704EB3B3 /* TextSegmenterTests.swift */; };
 		C4C6479D3CB7D43D93E4C5F3 /* AudioTranscriptionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0A1ED36ADC537E6FE1C77E /* AudioTranscriptionApp.swift */; };
+		C876D216136E84A145914309 /* PhoneticCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290A5B5BABEC40D267935CD5 /* PhoneticCellView.swift */; };
+		CC944F364FE993797F36B963 /* SegmentScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6372555EA01BA1B76E0034ED /* SegmentScrollView.swift */; };
 		D2CE51CFAD1B1776F4CE2D71 /* TemporaryIPAAnnotator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5174EAE9345E7FFFDC335CEE /* TemporaryIPAAnnotator.swift */; };
+		D66A3CF73192C4A693E13852 /* SegmentGroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD764EE3341C4800899A7845 /* SegmentGroupView.swift */; };
 		DDE8A862F40B5BFFBA2EE43E /* MandarinIPAConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042556A762FD788DD60FB33 /* MandarinIPAConverter.swift */; };
 		E3F3C3F5B25BC63C4F634244 /* AudioTranscriptionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F0117065851950DC779C22 /* AudioTranscriptionEngine.swift */; };
+		E691F4CD24A233BD1E8B825A /* PopupModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBFDC21D384ABA4FD576A4DE /* PopupModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,26 +52,42 @@
 
 /* Begin PBXFileReference section */
 		0042556A762FD788DD60FB33 /* MandarinIPAConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MandarinIPAConverter.swift; sourceTree = "<group>"; };
+		0E6D65D7ECBEFDC004B04FA4 /* PhoneticCell.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PhoneticCell.swift; path = Models/PhoneticCell.swift; sourceTree = "<group>"; };
 		137C360F7979A5B7DEA7E113 /* AnnotationCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationCache.swift; sourceTree = "<group>"; };
+		27A8D8CCD195A4BBEBF5D777 /* SegmentRecord+Phonetics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "SegmentRecord+Phonetics.swift"; path = "Extensions/SegmentRecord+Phonetics.swift"; sourceTree = "<group>"; };
+		290A5B5BABEC40D267935CD5 /* PhoneticCellView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PhoneticCellView.swift; path = Components/PhoneticCellView.swift; sourceTree = "<group>"; };
 		335D90992AED84DD03E885F4 /* TextSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSegmenter.swift; sourceTree = "<group>"; };
 		3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionLanguage.swift; sourceTree = "<group>"; };
 		466E622C6A47137F18648AD6 /* SegmentsReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SegmentsReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		50D0E5FB6F00279247A6C73D /* CellPopupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CellPopupView.swift; path = Components/CellPopupView.swift; sourceTree = "<group>"; };
 		5174EAE9345E7FFFDC335CEE /* TemporaryIPAAnnotator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryIPAAnnotator.swift; sourceTree = "<group>"; };
 		543236A632C912FD8C705100 /* AudioBoundaryHintExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBoundaryHintExtractor.swift; sourceTree = "<group>"; };
+		6372555EA01BA1B76E0034ED /* SegmentScrollView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SegmentScrollView.swift; path = Views/SegmentScrollView.swift; sourceTree = "<group>"; };
 		71321F0C2695195E704EB3B3 /* TextSegmenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSegmenterTests.swift; sourceTree = "<group>"; };
 		7E24F2E30C36CFC02AC11C70 /* AudioTranscription.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AudioTranscription.entitlements; sourceTree = "<group>"; };
 		81674886E230629A7D7ABB94 /* SegmentsReaderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentsReaderApp.swift; sourceTree = "<group>"; };
+		8A83F94D18142588F3AF0B7B /* SegmentsReaderModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SegmentsReaderModel.swift; path = Models/SegmentsReaderModel.swift; sourceTree = "<group>"; };
 		8D0A1ED36ADC537E6FE1C77E /* AudioTranscriptionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranscriptionApp.swift; sourceTree = "<group>"; };
+		944DA89FE84DF0921C4D9910 /* SegmentLine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SegmentLine.swift; path = Models/SegmentLine.swift; sourceTree = "<group>"; };
+		9B3733165272E327915FBCF7 /* SegmentsReaderView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SegmentsReaderView.swift; path = Views/SegmentsReaderView.swift; sourceTree = "<group>"; };
+		A098D1A9AA1AC2699476EA53 /* ChineseCharacterUnit+IPA.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "ChineseCharacterUnit+IPA.swift"; path = "Extensions/ChineseCharacterUnit+IPA.swift"; sourceTree = "<group>"; };
+		A56CE8740F4B4F54C299B8EC /* IPAFontSizeControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IPAFontSizeControl.swift; path = Components/IPAFontSizeControl.swift; sourceTree = "<group>"; };
+		A9222655B7EB6AD2934C321E /* String+Trim.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = "String+Trim.swift"; path = "Extensions/String+Trim.swift"; sourceTree = "<group>"; };
 		B9C64E39A3DB2AC14DF67D2B /* ChinesePhonetics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChinesePhonetics.swift; sourceTree = "<group>"; };
+		BBFDC21D384ABA4FD576A4DE /* PopupModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PopupModel.swift; path = Models/PopupModel.swift; sourceTree = "<group>"; };
 		D0F88B9E9E14BDBA80CAF03A /* SegmentData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentData.swift; sourceTree = "<group>"; };
 		F4F0117065851950DC779C22 /* AudioTranscriptionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranscriptionEngine.swift; sourceTree = "<group>"; };
 		F76EB67F2C3CE5CEAF606013 /* AudioTranscriptionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AudioTranscriptionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F9A4312CA451534DFEE797F0 /* PhoneticScoreView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PhoneticScoreView.swift; path = Components/PhoneticScoreView.swift; sourceTree = "<group>"; };
 		FB48642F7072161A705EB9DE /* AudioTranscription.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AudioTranscription.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FD764EE3341C4800899A7845 /* SegmentGroupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SegmentGroupView.swift; path = Views/SegmentGroupView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8FB1D7DE2FA844EC0049BCDF /* docs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = docs;
 			sourceTree = "<group>";
 		};
@@ -72,6 +102,27 @@
 				67D1546D9AF45A6506C1F46C /* Phonetics */,
 			);
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		3C49212D6176E6DF027153D3 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A56CE8740F4B4F54C299B8EC /* IPAFontSizeControl.swift */,
+				F9A4312CA451534DFEE797F0 /* PhoneticScoreView.swift */,
+				290A5B5BABEC40D267935CD5 /* PhoneticCellView.swift */,
+				50D0E5FB6F00279247A6C73D /* CellPopupView.swift */,
+			);
+			name = Components;
+			sourceTree = "<group>";
+		};
+		5FAC7929274131C5B2D0085B /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				9B3733165272E327915FBCF7 /* SegmentsReaderView.swift */,
+				6372555EA01BA1B76E0034ED /* SegmentScrollView.swift */,
+				FD764EE3341C4800899A7845 /* SegmentGroupView.swift */,
+			);
+			name = Views;
 			sourceTree = "<group>";
 		};
 		67D1546D9AF45A6506C1F46C /* Phonetics */ = {
@@ -121,8 +172,22 @@
 			isa = PBXGroup;
 			children = (
 				81674886E230629A7D7ABB94 /* SegmentsReaderApp.swift */,
+				FD709DE9FBC52090CD8769E0 /* Models */,
+				5FAC7929274131C5B2D0085B /* Views */,
+				3C49212D6176E6DF027153D3 /* Components */,
+				D95F0A3A2FEDEF91C27EC660 /* Extensions */,
 			);
 			path = SegmentsReader;
+			sourceTree = "<group>";
+		};
+		D95F0A3A2FEDEF91C27EC660 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				A9222655B7EB6AD2934C321E /* String+Trim.swift */,
+				27A8D8CCD195A4BBEBF5D777 /* SegmentRecord+Phonetics.swift */,
+				A098D1A9AA1AC2699476EA53 /* ChineseCharacterUnit+IPA.swift */,
+			);
+			name = Extensions;
 			sourceTree = "<group>";
 		};
 		F29BB359668253E43ABB7676 /* Products */ = {
@@ -133,6 +198,17 @@
 				466E622C6A47137F18648AD6 /* SegmentsReader.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FD709DE9FBC52090CD8769E0 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				8A83F94D18142588F3AF0B7B /* SegmentsReaderModel.swift */,
+				BBFDC21D384ABA4FD576A4DE /* PopupModel.swift */,
+				0E6D65D7ECBEFDC004B04FA4 /* PhoneticCell.swift */,
+				944DA89FE84DF0921C4D9910 /* SegmentLine.swift */,
+			);
+			name = Models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -150,8 +226,6 @@
 				A1497F72BFC753824D280D58 /* PBXTargetDependency */,
 			);
 			name = AudioTranscriptionTests;
-			packageProductDependencies = (
-			);
 			productName = AudioTranscriptionTests;
 			productReference = F76EB67F2C3CE5CEAF606013 /* AudioTranscriptionTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -167,8 +241,6 @@
 			dependencies = (
 			);
 			name = SegmentsReader;
-			packageProductDependencies = (
-			);
 			productName = SegmentsReader;
 			productReference = 466E622C6A47137F18648AD6 /* SegmentsReader.app */;
 			productType = "com.apple.product-type.application";
@@ -184,8 +256,6 @@
 			dependencies = (
 			);
 			name = AudioTranscription;
-			packageProductDependencies = (
-			);
 			productName = AudioTranscription;
 			productReference = FB48642F7072161A705EB9DE /* AudioTranscription.app */;
 			productType = "com.apple.product-type.application";
@@ -253,6 +323,20 @@
 				89C9608C2CC3632F3D08D33A /* SegmentData.swift in Sources */,
 				776EC4F820818FEC2D655EFE /* SegmentsReaderApp.swift in Sources */,
 				A2619BC6EA0C6F6D4A66AE7F /* TemporaryIPAAnnotator.swift in Sources */,
+				9D7DEFFB9B716078B3702D2E /* SegmentsReaderModel.swift in Sources */,
+				E691F4CD24A233BD1E8B825A /* PopupModel.swift in Sources */,
+				54C59BF548AAA7B1F770F947 /* PhoneticCell.swift in Sources */,
+				9B82066B31F8CB6E102418F5 /* SegmentLine.swift in Sources */,
+				2872DFAF0CF8E232FEF90557 /* SegmentsReaderView.swift in Sources */,
+				CC944F364FE993797F36B963 /* SegmentScrollView.swift in Sources */,
+				D66A3CF73192C4A693E13852 /* SegmentGroupView.swift in Sources */,
+				011AFB3EE473B0FA54E08795 /* IPAFontSizeControl.swift in Sources */,
+				B6E267AF5D7FC3156FC644D9 /* PhoneticScoreView.swift in Sources */,
+				C876D216136E84A145914309 /* PhoneticCellView.swift in Sources */,
+				B9F01A330227DA20AE0CDBE1 /* CellPopupView.swift in Sources */,
+				A18E5DA875E9D6B140CCB4EA /* String+Trim.swift in Sources */,
+				9EA67195450744B91DE65579 /* SegmentRecord+Phonetics.swift in Sources */,
+				8A755A57A1A01C13AC067B8E /* ChineseCharacterUnit+IPA.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

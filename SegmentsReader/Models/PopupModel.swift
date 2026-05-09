@@ -7,6 +7,7 @@ final class PopupModel: ObservableObject {
     
     @AppStorage("PopupPosition.x") var positionX: Double = 300
     @AppStorage("PopupPosition.y") var positionY: Double = 150
+    @AppStorage("Popup.showsIPA") var showsIPA: Bool = true
     
     var position: CGPoint {
         get { CGPoint(x: positionX, y: positionY) }

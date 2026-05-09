@@ -11,7 +11,7 @@ struct CellPopupView: View {
                 ZStack(alignment: .topTrailing) {
                     PhoneticCellView(
                         cell: cell,
-                        isShowingIPA: true,
+                        isShowingIPA: popupModel.showsIPA,
                         ipaFontSize: 16.0,
                         cellWidth: 100,
                         isPopup: true
@@ -20,7 +20,7 @@ struct CellPopupView: View {
                     .padding(.horizontal, 24)
                     .padding(.bottom, 24)
                 }
-                .background(Color.primary.opacity(0.04))
+                .background(Color.accentColor.opacity(0.1))
                 .background(.background)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
@@ -120,6 +120,20 @@ struct CellPopupView: View {
                                 Image(systemName: "arrow.forward.to.line")
                                     .font(.system(size: 32))
                                 Text("Last")
+                                    .font(.caption)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Divider()
+                            .frame(height: 32)
+                            .padding(.horizontal, 4)
+
+                        Button(action: { popupModel.showsIPA.toggle() }) {
+                            VStack {
+                                Image(systemName: popupModel.showsIPA ? "eye" : "eye.slash")
+                                    .font(.system(size: 32))
+                                Text("IPA")
                                     .font(.caption)
                             }
                         }

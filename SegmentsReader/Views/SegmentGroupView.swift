@@ -5,7 +5,7 @@ struct SegmentGroupView: View {
 
     @AppStorage("SegmentsReader.ipaFontSize") private var ipaFontSize = 8.0
     @State private var showsPhoneticGrid = false
-    @State private var showsIPA = true
+    @State private var showsIPA = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {

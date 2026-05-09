@@ -27,6 +27,7 @@ struct SegmentsReaderView: View {
         }
         .onAppear {
             popupModel.allSegments = model.segments
+            model.restoreLastURL()
         }
         .fileImporter(
             isPresented: $isImporting,

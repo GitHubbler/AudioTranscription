@@ -14,6 +14,8 @@ final class SegmentsReaderModel: ObservableObject {
         !segments.isEmpty
     }
 
+    private static let lastURLKey = "LastOpenedFileURL"
+
     func openFile() {
 #if os(macOS)
         let panel = NSOpenPanel()
@@ -38,6 +40,7 @@ final class SegmentsReaderModel: ObservableObject {
         do {
             let data = try Data(contentsOf: url)
             let records = try JSONDecoder().decode([SegmentRecord].self, from: data)
+            UserDefaults.standard.set(url.path, forKey: Self.lastURLKey)
             fileURL = url
             segments = records.enumerated().map { index, record in
                 ReaderSegment(number: index + 1, record: record)
@@ -48,6 +51,14 @@ final class SegmentsReaderModel: ObservableObject {
             errorText = error.localizedDescription
             statusText = "Could not load JSON"
         }
+    }
+
+    func restoreLastURL() {
+        guard !isNotEmptySegments,
+              let path = UserDefaults.standard.string(forKey: Self.lastURLKey),
+              !path.isEmpty else { return }
+        let url = URL(fileURLWithPath: path)
+        load(url)
     }
 }
 

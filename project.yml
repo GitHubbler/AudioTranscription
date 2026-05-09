@@ -24,6 +24,8 @@ targets:
       - path: Shared
         excludes:
           - "**/.DS_Store"
+    resources:
+      - path: Shared/cedict.txt
     settings:
       base:
         PRODUCT_NAME: AudioTranscription
@@ -46,6 +48,8 @@ targets:
       - path: Shared
         excludes:
           - "**/.DS_Store"
+    resources:
+      - path: Shared/cedict.txt
     settings:
       base:
         PRODUCT_NAME: SegmentsReader

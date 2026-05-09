@@ -21,7 +21,11 @@ enum ChineseRomanizer {
 }
 
 enum ChineseLexicalAnnotator {
-    static func units(from text: String) -> [ChineseLexicalUnit] {
+    static func units(
+        from text: String,
+        cache: LocalAnnotationCache? = nil,
+        dictionary: ChineseLexicalDictionary = .shared
+    ) -> [ChineseLexicalUnit] {
         var units: [ChineseLexicalUnit] = []
         var current = ""
         var currentKind: ChineseLexicalUnit.Kind?
@@ -30,26 +34,27 @@ enum ChineseLexicalAnnotator {
             guard let kind = currentKind, !current.isEmpty else { return }
 
             if kind == .hanzi {
-                units.append(contentsOf: hanziUnits(from: current))
+                units.append(contentsOf: hanziUnits(from: current, cache: cache, dictionary: dictionary))
             } else if kind == .number {
                 let pinyin = MandarinNumberRomanizer.pinyinForNumberRun(current)
-                units.append(
-                    ChineseLexicalUnit(
-                        surface: current,
-                        kind: kind,
-                        zhLatnPinyin: pinyin,
-                        ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
-                        enGloss: TemporaryChineseGlosses.gloss(for: current, kind: kind)
-                    )
+                let unit = ChineseLexicalUnit(
+                    surface: current,
+                    kind: kind,
+                    zhLatnPinyin: pinyin,
+                    ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
+                    enGloss: MandarinNumberRomanizer.englishForNumberRun(current),
+                    annotationSource: AnnotationSource.generated.rawValue
                 )
+                cache?.storeChineseLexicalUnit(unit)
+                units.append(unit)
             } else {
-                units.append(
-                    ChineseLexicalUnit(
-                        surface: current,
-                        kind: kind,
-                        enGloss: TemporaryChineseGlosses.gloss(for: current, kind: kind)
-                    )
+                let unit = ChineseLexicalUnit(
+                    surface: current,
+                    kind: kind,
+                    annotationSource: AnnotationSource.generated.rawValue
                 )
+                cache?.storeChineseLexicalUnit(unit)
+                units.append(unit)
             }
 
             current = ""
@@ -79,7 +84,11 @@ enum ChineseLexicalAnnotator {
         return units
     }
 
-    private static func hanziUnits(from text: String) -> [ChineseLexicalUnit] {
+    private static func hanziUnits(
+        from text: String,
+        cache: LocalAnnotationCache?,
+        dictionary: ChineseLexicalDictionary
+    ) -> [ChineseLexicalUnit] {
         let tokenizer = NLTokenizer(unit: .word)
         tokenizer.string = text
         tokenizer.setLanguage(.simplifiedChinese)
@@ -87,34 +96,44 @@ enum ChineseLexicalAnnotator {
         var units: [ChineseLexicalUnit] = []
         tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
             let surface = String(text[range])
-            let pinyin = ChineseRomanizer.pinyinForHanzi(surface)
-            units.append(
-                ChineseLexicalUnit(
-                    surface: surface,
-                    kind: .hanzi,
-                    zhLatnPinyin: pinyin,
-                    ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
-                    enGloss: TemporaryChineseGlosses.gloss(for: surface, kind: .hanzi)
-                )
-            )
+            units.append(annotatedHanziUnit(surface: surface, cache: cache, dictionary: dictionary))
             return true
         }
 
         if units.isEmpty {
             units = text.map { character in
                 let surface = String(character)
-                let pinyin = ChineseRomanizer.pinyinForHanzi(surface)
-                return ChineseLexicalUnit(
-                    surface: surface,
-                    kind: .hanzi,
-                    zhLatnPinyin: pinyin,
-                    ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
-                    enGloss: TemporaryChineseGlosses.gloss(for: surface, kind: .hanzi)
-                )
+                return annotatedHanziUnit(surface: surface, cache: cache, dictionary: dictionary)
             }
         }
 
         return units
+    }
+
+    private static func annotatedHanziUnit(
+        surface: String,
+        cache: LocalAnnotationCache?,
+        dictionary: ChineseLexicalDictionary
+    ) -> ChineseLexicalUnit {
+        if let unit = dictionary.lexicalUnit(for: surface, kind: .hanzi) {
+            cache?.storeChineseLexicalUnit(unit)
+            return unit
+        }
+
+        if let cachedUnit = cache?.chineseLexicalUnit(surface: surface, kind: .hanzi) {
+            return cachedUnit
+        }
+
+        let pinyin = ChineseRomanizer.pinyinForHanzi(surface)
+        let unit = ChineseLexicalUnit(
+            surface: surface,
+            kind: .hanzi,
+            zhLatnPinyin: pinyin,
+            ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
+            annotationSource: AnnotationSource.generated.rawValue
+        )
+        cache?.storeChineseLexicalUnit(unit)
+        return unit
     }
 
     private static func lexicalKind(for character: Character) -> ChineseLexicalUnit.Kind {
@@ -139,13 +158,22 @@ enum ChineseLexicalAnnotator {
 }
 
 enum ChineseCharacterAnnotator {
-    static func units(from text: String, cache: LocalAnnotationCache? = nil) -> [ChineseCharacterUnit] {
+    static func units(
+        from text: String,
+        cache: LocalAnnotationCache? = nil,
+        dictionary: ChineseLexicalDictionary = .shared
+    ) -> [ChineseCharacterUnit] {
         text.compactMap { character in
             guard !character.isWhitespace else { return nil }
 
             let surface = String(character)
             let pinyin: String
             if ChineseScriptClassifier.isHanzi(character) {
+                if let unit = dictionary.characterUnit(for: surface) {
+                    cache?.storeChineseCharacterUnit(unit)
+                    return unit
+                }
+
                 pinyin = ChineseRomanizer.pinyinForHanzi(surface)
             } else if character.isNumber {
                 pinyin = MandarinNumberRomanizer.pinyinForDigit(character)
@@ -161,7 +189,10 @@ enum ChineseCharacterAnnotator {
                 surface: surface,
                 zhLatnPinyin: pinyin,
                 ipa: MandarinIPAConverter.ipa(fromPinyin: pinyin),
-                enGloss: TemporaryChineseGlosses.gloss(for: surface, kind: nil)
+                enGloss: character.isNumber
+                    ? MandarinNumberRomanizer.englishForDigit(surface) ?? ""
+                    : "",
+                annotationSource: AnnotationSource.generated.rawValue
             )
             cache?.storeChineseCharacterUnit(unit)
             return unit
@@ -346,122 +377,6 @@ private enum MandarinNumberRomanizer {
         default:
             return String(value)
         }
-    }
-}
-
-private enum TemporaryChineseGlosses {
-    private static let glosses: [String: String] = [
-        "今": "now",
-        "天": "day",
-        "起": "rise/from",
-        "我": "I/we",
-        "国": "country",
-        "队": "team",
-        "对": "toward",
-        "个": "classifier",
-        "非": "not",
-        "洲": "continent",
-        "非洲": "Africa",
-        "建": "build",
-        "交": "relations",
-        "建交": "establish relations",
-        "全": "whole",
-        "面": "aspect",
-        "实": "actual",
-        "施": "carry out",
-        "举": "raise",
-        "措": "measure",
-        "中": "middle",
-        "中国": "China",
-        "也": "also",
-        "由": "from",
-        "此": "this",
-        "成": "become",
-        "为": "be",
-        "球": "sphere",
-        "全球": "global",
-        "首": "first",
-        "所": "place",
-        "有": "have",
-        "所有": "all",
-        "和": "and",
-        "的": "of",
-        "最": "most",
-        "不": "not",
-        "发": "develop",
-        "达": "reach",
-        "发达": "developed",
-        "家": "home",
-        "国家": "country",
-        "单": "single",
-        "方": "side",
-        "临": "face",
-        "主要": "main",
-        "主": "main",
-        "要": "important",
-        "经": "manage",
-        "济": "aid",
-        "体": "body",
-        "经济体": "economy",
-        "关": "customs/pass",
-        "税": "tax",
-        "关税": "tariff",
-        "零": "zero",
-        "全面": "comprehensive",
-        "实施": "implement",
-        "举措": "measure",
-        "根": "root",
-        "据": "according",
-        "根据": "according to",
-        "海": "sea",
-        "海关": "customs",
-        "统": "unify",
-        "计": "count",
-        "统计": "statistics",
-        "年": "year",
-        "与": "with",
-        "双": "pair",
-        "边": "side",
-        "贸": "trade",
-        "易": "exchange",
-        "贸易": "trade",
-        "总": "total",
-        "值": "value",
-        "总值": "total value",
-        "超": "exceed",
-        "亿": "hundred million",
-        "美": "US",
-        "元": "dollar",
-        "创": "create",
-        "历": "history",
-        "史": "history",
-        "新": "new",
-        "高": "high",
-        "一": "one",
-        "季": "season",
-        "度": "degree",
-        "额": "amount",
-        "同": "same",
-        "比": "compare",
-        "增": "increase",
-        "长": "grow",
-        "增长": "growth"
-    ]
-
-    static func gloss(for surface: String, kind: ChineseLexicalUnit.Kind?) -> String {
-        if let gloss = glosses[surface] {
-            return gloss
-        }
-
-        if surface.count == 1, let digitGloss = MandarinNumberRomanizer.englishForDigit(surface) {
-            return digitGloss
-        }
-
-        if kind == .number {
-            return MandarinNumberRomanizer.englishForNumberRun(surface)
-        }
-
-        return ""
     }
 }
 

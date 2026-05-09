@@ -13,6 +13,10 @@
 		2F412F196790D3C79B6815E6 /* TranscriptionLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */; };
 		2F5E107DC98AF06F5D3DA0F2 /* ChinesePhonetics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C64E39A3DB2AC14DF67D2B /* ChinesePhonetics.swift */; };
 		3FED8BFDD8E906B9E4498774 /* ChinesePhonetics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C64E39A3DB2AC14DF67D2B /* ChinesePhonetics.swift */; };
+		4107D1C597F54DD6A84576F3 /* ChineseLexicalDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4107D1C497F54DD6A84576F3 /* ChineseLexicalDictionary.swift */; };
+		4107D1C697F54DD6A84576F3 /* ChineseLexicalDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4107D1C497F54DD6A84576F3 /* ChineseLexicalDictionary.swift */; };
+		4107D1C997F54DD6A84576F3 /* cedict.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4107D1C797F54DD6A84576F3 /* cedict.txt */; };
+		4107D1CA97F54DD6A84576F3 /* cedict.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4107D1C797F54DD6A84576F3 /* cedict.txt */; };
 		4A53F123591C54227170617A /* TextSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 335D90992AED84DD03E885F4 /* TextSegmenter.swift */; };
 		54C59BF548AAA7B1F770F947 /* PhoneticCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6D65D7ECBEFDC004B04FA4 /* PhoneticCell.swift */; };
 		5842EB509B744A309DB7E928 /* AnnotationCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 137C360F7979A5B7DEA7E113 /* AnnotationCache.swift */; };
@@ -58,6 +62,8 @@
 		290A5B5BABEC40D267935CD5 /* PhoneticCellView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PhoneticCellView.swift; path = Components/PhoneticCellView.swift; sourceTree = "<group>"; };
 		335D90992AED84DD03E885F4 /* TextSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSegmenter.swift; sourceTree = "<group>"; };
 		3A3574BD47215D01BB9D7F22 /* TranscriptionLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionLanguage.swift; sourceTree = "<group>"; };
+		4107D1C497F54DD6A84576F3 /* ChineseLexicalDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChineseLexicalDictionary.swift; sourceTree = "<group>"; };
+		4107D1C797F54DD6A84576F3 /* cedict.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = cedict.txt; sourceTree = "<group>"; };
 		466E622C6A47137F18648AD6 /* SegmentsReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SegmentsReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		50D0E5FB6F00279247A6C73D /* CellPopupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CellPopupView.swift; path = Components/CellPopupView.swift; sourceTree = "<group>"; };
 		5174EAE9345E7FFFDC335CEE /* TemporaryIPAAnnotator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryIPAAnnotator.swift; sourceTree = "<group>"; };
@@ -97,6 +103,7 @@
 			children = (
 				137C360F7979A5B7DEA7E113 /* AnnotationCache.swift */,
 				D0F88B9E9E14BDBA80CAF03A /* SegmentData.swift */,
+				4107D1C797F54DD6A84576F3 /* cedict.txt */,
 				67D1546D9AF45A6506C1F46C /* Phonetics */,
 			);
 			path = Shared;
@@ -126,6 +133,7 @@
 		67D1546D9AF45A6506C1F46C /* Phonetics */ = {
 			isa = PBXGroup;
 			children = (
+				4107D1C497F54DD6A84576F3 /* ChineseLexicalDictionary.swift */,
 				B9C64E39A3DB2AC14DF67D2B /* ChinesePhonetics.swift */,
 				0042556A762FD788DD60FB33 /* MandarinIPAConverter.swift */,
 				5174EAE9345E7FFFDC335CEE /* TemporaryIPAAnnotator.swift */,
@@ -233,6 +241,7 @@
 			buildConfigurationList = 7B1AA6F5D93AEE5C988B11E1 /* Build configuration list for PBXNativeTarget "SegmentsReader" */;
 			buildPhases = (
 				449683276B890415AFDB40A3 /* Sources */,
+				4107D1CC97F54DD6A84576F3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -248,6 +257,7 @@
 			buildConfigurationList = 27FBE3B567649DE075F03AE8 /* Build configuration list for PBXNativeTarget "AudioTranscription" */;
 			buildPhases = (
 				44D7E5614F1A2E20D5EB30CB /* Sources */,
+				4107D1CB97F54DD6A84576F3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -302,6 +312,25 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		4107D1CB97F54DD6A84576F3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4107D1C997F54DD6A84576F3 /* cedict.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4107D1CC97F54DD6A84576F3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4107D1CA97F54DD6A84576F3 /* cedict.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		2EB4C6C264BD1558EBCE19EE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -316,6 +345,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6A216E1FE08AD21852046E1B /* AnnotationCache.swift in Sources */,
+				4107D1C697F54DD6A84576F3 /* ChineseLexicalDictionary.swift in Sources */,
 				3FED8BFDD8E906B9E4498774 /* ChinesePhonetics.swift in Sources */,
 				DDE8A862F40B5BFFBA2EE43E /* MandarinIPAConverter.swift in Sources */,
 				89C9608C2CC3632F3D08D33A /* SegmentData.swift in Sources */,
@@ -346,6 +376,7 @@
 				B96C5BF88030A49B4B46D298 /* AudioBoundaryHintExtractor.swift in Sources */,
 				C4C6479D3CB7D43D93E4C5F3 /* AudioTranscriptionApp.swift in Sources */,
 				E3F3C3F5B25BC63C4F634244 /* AudioTranscriptionEngine.swift in Sources */,
+				4107D1C597F54DD6A84576F3 /* ChineseLexicalDictionary.swift in Sources */,
 				2F5E107DC98AF06F5D3DA0F2 /* ChinesePhonetics.swift in Sources */,
 				2DA95DFC61F02E38CCB05538 /* MandarinIPAConverter.swift in Sources */,
 				8A7F531926C5C1D3C505B97B /* SegmentData.swift in Sources */,

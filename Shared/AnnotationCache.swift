@@ -32,6 +32,21 @@ final class LocalAnnotationCache {
         }
     }
 
+    func chineseLexicalUnit(surface: String, kind: ChineseLexicalUnit.Kind) -> ChineseLexicalUnit? {
+        queue.sync {
+            storage.chineseLexicalUnits[lexicalCacheKey(surface: surface, kind: kind)]
+        }
+    }
+
+    func storeChineseLexicalUnit(_ unit: ChineseLexicalUnit) {
+        guard unit.isAnnotationUsable else { return }
+
+        queue.sync {
+            storage.chineseLexicalUnits[lexicalCacheKey(surface: unit.surface, kind: unit.kind)] = unit
+            saveStorage()
+        }
+    }
+
     private func saveStorage() {
         do {
             let encoder = JSONEncoder()
@@ -49,6 +64,10 @@ final class LocalAnnotationCache {
 
     private func cacheKey(surface: String, pinyin: String) -> String {
         "zh.character.v1|\(surface)|\(pinyin)"
+    }
+
+    private func lexicalCacheKey(surface: String, kind: ChineseLexicalUnit.Kind) -> String {
+        "zh.lexical.v1|\(kind.rawValue)|\(surface)"
     }
 
     private static func loadStorage(from url: URL) -> AnnotationCacheStorage {
@@ -74,4 +93,11 @@ final class LocalAnnotationCache {
 
 private struct AnnotationCacheStorage: Codable {
     var chineseCharacterUnits: [String: ChineseCharacterUnit] = [:]
+    var chineseLexicalUnits: [String: ChineseLexicalUnit] = [:]
+}
+
+private extension ChineseLexicalUnit {
+    var isAnnotationUsable: Bool {
+        !zhLatnPinyin.isEmpty || !ipa.isEmpty || !enGloss.isEmpty
+    }
 }

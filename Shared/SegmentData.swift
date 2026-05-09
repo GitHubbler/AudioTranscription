@@ -2,6 +2,13 @@ import Foundation
 
 typealias SegmentRecord = TextSegmentValue
 
+enum AnnotationSource: String, Codable, Sendable {
+    case generated
+    case dictionary
+    case modelTool
+    case userCorrected
+}
+
 struct TextSegmentValue: Codable, Equatable, Sendable {
     let sourceLang: String
     let enText: String
@@ -180,7 +187,7 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         guard !zhText.isEmpty else { return self }
 
         let lexicalUnits = zhLexicalUnits.isEmpty
-            ? ChineseLexicalAnnotator.units(from: zhText)
+            ? ChineseLexicalAnnotator.units(from: zhText, cache: cache)
             : zhLexicalUnits
         let characterUnits = zhCharacterUnits.isCharacterIPARefreshNeeded
             ? ChineseCharacterAnnotator.units(from: zhText, cache: cache)
@@ -245,24 +252,28 @@ struct ChineseCharacterUnit: Codable, Equatable, Sendable {
     let zhLatnPinyin: String
     let ipa: String
     let enGloss: String
+    let annotationSource: String
 
     enum CodingKeys: String, CodingKey {
         case surface
         case zhLatnPinyin = "zh-Latn-pinyin"
         case ipa = "IPA"
         case enGloss
+        case annotationSource
     }
 
     init(
         surface: String,
         zhLatnPinyin: String = "",
         ipa: String = "",
-        enGloss: String = ""
+        enGloss: String = "",
+        annotationSource: String = ""
     ) {
         self.surface = surface
         self.zhLatnPinyin = zhLatnPinyin
         self.ipa = ipa
         self.enGloss = enGloss
+        self.annotationSource = annotationSource
     }
 
     init(from decoder: Decoder) throws {
@@ -271,6 +282,7 @@ struct ChineseCharacterUnit: Codable, Equatable, Sendable {
         zhLatnPinyin = try container.decodeIfPresent(String.self, forKey: .zhLatnPinyin) ?? ""
         ipa = try container.decodeIfPresent(String.self, forKey: .ipa) ?? ""
         enGloss = try container.decodeIfPresent(String.self, forKey: .enGloss) ?? ""
+        annotationSource = try container.decodeIfPresent(String.self, forKey: .annotationSource) ?? ""
     }
 
     func encode(to encoder: Encoder) throws {
@@ -287,6 +299,10 @@ struct ChineseCharacterUnit: Codable, Equatable, Sendable {
 
         if !enGloss.isEmpty {
             try container.encode(enGloss, forKey: .enGloss)
+        }
+
+        if !annotationSource.isEmpty {
+            try container.encode(annotationSource, forKey: .annotationSource)
         }
     }
 }
@@ -309,6 +325,7 @@ struct ChineseLexicalUnit: Codable, Equatable, Sendable {
     let zhLatnPinyin: String
     let ipa: String
     let enGloss: String
+    let annotationSource: String
 
     enum Kind: String, Codable, Sendable {
         case hanzi
@@ -324,6 +341,7 @@ struct ChineseLexicalUnit: Codable, Equatable, Sendable {
         case zhLatnPinyin = "zh-Latn-pinyin"
         case ipa = "IPA"
         case enGloss
+        case annotationSource
     }
 
     init(
@@ -331,13 +349,15 @@ struct ChineseLexicalUnit: Codable, Equatable, Sendable {
         kind: Kind,
         zhLatnPinyin: String = "",
         ipa: String = "",
-        enGloss: String = ""
+        enGloss: String = "",
+        annotationSource: String = ""
     ) {
         self.surface = surface
         self.kind = kind
         self.zhLatnPinyin = zhLatnPinyin
         self.ipa = ipa
         self.enGloss = enGloss
+        self.annotationSource = annotationSource
     }
 
     init(from decoder: Decoder) throws {
@@ -347,6 +367,7 @@ struct ChineseLexicalUnit: Codable, Equatable, Sendable {
         zhLatnPinyin = try container.decodeIfPresent(String.self, forKey: .zhLatnPinyin) ?? ""
         ipa = try container.decodeIfPresent(String.self, forKey: .ipa) ?? ""
         enGloss = try container.decodeIfPresent(String.self, forKey: .enGloss) ?? ""
+        annotationSource = try container.decodeIfPresent(String.self, forKey: .annotationSource) ?? ""
     }
 
     func encode(to encoder: Encoder) throws {
@@ -364,6 +385,10 @@ struct ChineseLexicalUnit: Codable, Equatable, Sendable {
 
         if !enGloss.isEmpty {
             try container.encode(enGloss, forKey: .enGloss)
+        }
+
+        if !annotationSource.isEmpty {
+            try container.encode(annotationSource, forKey: .annotationSource)
         }
     }
 

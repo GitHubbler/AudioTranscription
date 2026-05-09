@@ -259,7 +259,13 @@ final class TextSegmenterTests: XCTestCase {
         XCTAssertEqual(units.map(\.surface), ["今", "天", "5", "3", "个"])
         XCTAssertEqual(units.map(\.zhLatnPinyin), ["jīn", "tiān", "wǔ", "sān", "gè"])
         XCTAssertEqual(units.map(\.ipa), ["tɕin˥", "tʰjɛn˥", "u˨˩˦", "san˥", "kɤ˥˩"])
-        XCTAssertEqual(units.map(\.enGloss), ["now", "day", "five", "three", "classifier"])
+        XCTAssertTrue(units[0].enGloss.contains("now"))
+        XCTAssertTrue(units[1].enGloss.contains("day"))
+        XCTAssertEqual(units[2].enGloss, "five")
+        XCTAssertEqual(units[3].enGloss, "three")
+        XCTAssertTrue(units[4].enGloss.contains("classifier"))
+        XCTAssertEqual(units[0].annotationSource, AnnotationSource.dictionary.rawValue)
+        XCTAssertEqual(units[4].annotationSource, AnnotationSource.dictionary.rawValue)
     }
 
     func testLocalAnnotationCachePersistsChineseCharacterUnits() throws {
@@ -278,6 +284,33 @@ final class TextSegmenterTests: XCTestCase {
         let reloadedCache = LocalAnnotationCache(url: cacheURL)
 
         XCTAssertEqual(reloadedCache.chineseCharacterUnit(surface: "今", pinyin: "jīn"), unit)
+    }
+
+    func testLocalAnnotationCachePersistsChineseLexicalUnits() throws {
+        let cacheURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+            .appendingPathComponent("annotation-cache-v1.json")
+        let cache = LocalAnnotationCache(url: cacheURL)
+        let unit = ChineseLexicalUnit(
+            surface: "非洲",
+            kind: .hanzi,
+            zhLatnPinyin: "fēi zhōu",
+            ipa: "feɪ˥ ʈʂoʊ˥",
+            enGloss: "Africa",
+            annotationSource: AnnotationSource.dictionary.rawValue
+        )
+
+        cache.storeChineseLexicalUnit(unit)
+        let reloadedCache = LocalAnnotationCache(url: cacheURL)
+
+        XCTAssertEqual(reloadedCache.chineseLexicalUnit(surface: "非洲", kind: .hanzi), unit)
+    }
+
+    func testChineseDictionaryLookupUsesBundledCedictInsteadOfImplementationVocabulary() throws {
+        let entry = try XCTUnwrap(ChineseLexicalDictionary.shared.bestEntry(for: "龙猫"))
+
+        XCTAssertEqual(entry.toneMarkedPinyin, "lóng māo")
+        XCTAssertTrue(entry.primaryGloss.contains("Totoro"))
     }
 
     func testChineseCharacterAnnotationGlossesCurrentNewsSample() {

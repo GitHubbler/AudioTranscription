@@ -4,22 +4,23 @@ This is a lightweight place to collect ideas before they deserve design, code, o
 
 ## Now
 
-- Character IPA is deterministic pinyin-to-IPA, not a full phonology engine. It does not yet handle tone sandhi, contextual pronunciation, or heteronym correction beyond the pinyin supplied upstream.
-//pva: Pinyin supplied upstream (as of 260503) includes Chao Tone Letters as postfix, only applicable to the isolated character presentation.
-- Character-level English glosses are still a small hand-built scaffold. Replace this with an independent character annotation source rather than fragmenting sentence translations.
-- Semantic/lexical units are the next useful learning layer: surface text, pinyin, IPA, gloss, and possibly grammatical role per word-like unit.
+- **Stabilize lexical annotation units:** Treat semantic/lexical units as the next useful learning layer and the spine of the generated JSON. Each word-like unit should be able to carry surface text, normalized form if needed, Pinyin, IPA, gloss, kind, and later provenance/confidence.
+- **Move beyond implementation-time vocabulary:** Replace the `TemporaryChineseGlosses` scaffold with a dynamic lookup path. The tool should no longer depend on hardcoded vocabulary gathered while implementing a sample transcript.
+- **Add durable lexical data sources:** Introduce an offline lexical dictionary source, such as CC-CEDICT, behind a small lookup service. Keep room for permanent tool/API-assisted annotation later, but make the local dictionary/cache path reliable enough for offline use.
+- **Expand the persistent annotation cache to lexical units:** `LocalAnnotationCache` already persists usable character annotations; extend it so lexical units can persist dictionary lookups, generated readings, user/model corrections, source metadata, and refresh/version information.
+- **Stage context-aware phonetics:** Upgrade `ChineseRomanizer` and `MandarinIPAConverter` to consume lexical annotations instead of operating only from raw text. Heteronyms, tone sandhi, neutral tones, and IPA refinement can then improve incrementally through dictionary candidates, local rules, cache entries, and later model/tool-assisted corrections.
 
 ## Next
 
-- Expand the local annotation cache beyond character units so lexical units can persist corrected pinyin, IPA, glosses, and source metadata.
-- Add cache provenance fields: generated locally, supplied by model, corrected by user, imported from dictionary, and timestamp/version.
+- Define the annotation pipeline boundaries: tokenizer, dictionary lookup, number/date handling, Pinyin selection, IPA conversion, sandhi rules, cache read/write, and optional external annotation.
+- Add cache provenance fields: generated locally, supplied by model/tool, corrected by user, imported from dictionary, and timestamp/version.
 - Make stale annotation refresh rules explicit. For example, refresh placeholder IPA, but preserve user-corrected IPA.
 - Improve the SegmentsReader controls once the data shape settles: per-row visibility for Pinyin, IPA, glosses, character grid, and lexical grid.
 
 ## Later
 
 - Add a real dictionary-backed source for Hanzi character glosses, etymology, radicals, stroke data, and components.
-- Support lexical-unit disambiguation for Chinese compounds, names, numbers, percentages, dates, and domain-specific phrases.
+- Support richer lexical-unit disambiguation for Chinese compounds, names, numbers, percentages, dates, and domain-specific phrases.
 - Add tone sandhi and neutral-tone handling, especially for common forms such as 不, 一, reduplication, and 儿化.
 - Decide how German and Romanian IPA should be generated: local rule-based approximation, platform voices, dictionary lookup, or model-assisted annotation.
 

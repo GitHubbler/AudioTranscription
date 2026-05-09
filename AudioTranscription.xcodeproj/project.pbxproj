@@ -86,8 +86,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8FB1D7DE2FA844EC0049BCDF /* docs */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = docs;
 			sourceTree = "<group>";
 		};

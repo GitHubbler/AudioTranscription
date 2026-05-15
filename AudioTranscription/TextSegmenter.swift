@@ -510,7 +510,7 @@ struct TextSegmenter {
 
         if isStandaloneSentencePunctuation(trimmedText), let previous = segments.last {
             let mergedRange = previous.sourceRange?.lowerBound ?? trimmedRange.lowerBound
-            let mergedAudio = {
+            let mergedAudio: Range<TimeInterval>? = {
                 if let prevAudio = previous.audioRange, let currAudio = segmentAudioRange {
                     return prevAudio.lowerBound..<max(prevAudio.upperBound, currAudio.upperBound)
                 }

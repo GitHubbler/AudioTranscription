@@ -558,39 +558,31 @@ struct TextSegmenter {
         let lowerOffset = text.distance(from: text.startIndex, to: sourceRange.lowerBound)
         let upperOffset = text.distance(from: text.startIndex, to: sourceRange.upperBound)
 
-        let lowerRatio = max(0, min(1.0, Double(lowerOffset) / Double(textLength)))
-        let upperRatio = max(0, min(1.0, Double(upperOffset) / Double(textLength)))
-
-        let originalLength = segments.reduce(0) { length, segment in
-            length + segment.text.count + 1
+        func timeFor(offset: Int) -> TimeInterval {
+            let ratio = max(0, min(1.0, Double(offset) / Double(textLength)))
+            
+            let originalLength = segments.reduce(0) { length, segment in
+                length + segment.text.count + 1
+            }
+            let targetOffset = Int(ratio * Double(originalLength))
+            
+            var currentOffset = 0
+            for segment in segments {
+                let segmentLength = segment.text.count + 1
+                if targetOffset <= currentOffset + segmentLength {
+                    let segmentRatio = Double(targetOffset - currentOffset) / Double(max(1, segmentLength))
+                    let interpolated = segment.start + (segment.duration * segmentRatio)
+                    return min(max(interpolated, segment.start), segment.end)
+                }
+                currentOffset += segmentLength
+            }
+            return segments.last!.end
         }
 
-        let targetLower = Int(lowerRatio * Double(originalLength))
-        let targetUpper = Int(upperRatio * Double(originalLength))
+        let inPoint = timeFor(offset: lowerOffset)
+        let outPoint = timeFor(offset: upperOffset)
 
-        var inPoint: TimeInterval?
-        var outPoint: TimeInterval?
-
-        var currentOffset = 0
-        for segment in segments {
-            let segmentLength = segment.text.count + 1
-            
-            if inPoint == nil, targetLower <= currentOffset + segmentLength {
-                inPoint = segment.start
-            }
-            
-            if targetUpper <= currentOffset + segmentLength {
-                outPoint = segment.end
-                break
-            }
-            
-            currentOffset += segmentLength
-        }
-
-        let finalIn = inPoint ?? segments.first!.start
-        let finalOut = outPoint ?? segments.last!.end
-
-        return finalIn..<max(finalIn, finalOut)
+        return inPoint..<max(inPoint + 0.1, outPoint)
     }
 
     private func trimmedRange(_ range: Range<String.Index>, in text: String) -> Range<String.Index>? {

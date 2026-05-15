@@ -39,18 +39,37 @@ final class SegmentsReaderModel: ObservableObject {
         let playerItem = AVPlayerItem(url: audioURL)
         let player = AVPlayer(playerItem: playerItem)
         
-        player.seek(to: CMTime(seconds: inPoint, preferredTimescale: 600))
-        player.play()
+        self.audioPlayer = player
+        self.playingSegmentID = segment.id
         
-        playingSegmentID = segment.id
+        let inTime = CMTime(seconds: inPoint, preferredTimescale: 600)
+        let outTime = CMTime(seconds: outPoint, preferredTimescale: 600)
         
-        timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 10), queue: .main) { [weak self] time in
-            if time.seconds >= outPoint {
-                self?.stopAudio()
+        // Natively stops the player at the outPoint
+        playerItem.forwardPlaybackEndTime = outTime
+        
+        Task {
+            // Exact seek is required to prevent snapping to the start of compressed audio files
+            let _ = await player.seek(to: inTime, toleranceBefore: .zero, toleranceAfter: .zero)
+            
+            // Ensure the user hasn't selected another segment while seeking
+            guard self.playingSegmentID == segment.id else { return }
+            
+            player.play()
+            
+            self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 10), queue: .main) { [weak self, weak player] time in
+                Task { @MainActor in
+                    guard let self = self, let player = player else { return }
+                    
+                    // Reset UI if we hit the out point or if playback naturally stopped (rate == 0) after starting
+                    if time.seconds >= outPoint || (player.rate == 0 && time.seconds > inPoint + 0.1) {
+                        if self.playingSegmentID == segment.id {
+                            self.stopAudio()
+                        }
+                    }
+                }
             }
         }
-        
-        self.audioPlayer = player
     }
 
     func stopAudio() {

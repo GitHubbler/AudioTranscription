@@ -4,6 +4,10 @@ This is a lightweight place to collect ideas before they deserve design, code, o
 
 ## Now
 
+- **Stop transcribing affordance:** For any reason (e.g. if the user starts with the wrong file or wrong language, or thinks there is enough material) it must be possible to stop the transcript and optionally use what there is, restart, or start afresh by loading another file.
+
+- **Progress indicator:** The user must be able to tell how far the transcription, translation, and segmentation process has come.
+
 - **Stabilize lexical annotation units:** Treat semantic/lexical units as the next useful learning layer and the spine of the generated JSON. Each word-like unit should be able to carry surface text, normalized form if needed, Pinyin, IPA, gloss, kind, and later provenance/confidence.
 - **Move beyond implementation-time vocabulary:** Replace the `TemporaryChineseGlosses` scaffold with a dynamic lookup path. The tool should no longer depend on hardcoded vocabulary gathered while implementing a sample transcript.
 - **Add durable lexical data sources:** Introduce an offline lexical dictionary source, such as CC-CEDICT, behind a small lookup service. Keep room for permanent tool/API-assisted annotation later, but make the local dictionary/cache path reliable enough for offline use.

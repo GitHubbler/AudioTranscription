@@ -22,6 +22,7 @@ struct SegmentsReaderView: View {
             CellPopupView()
         }
         .environmentObject(popupModel)
+        .environmentObject(model)
         .onChange(of: model.segments) { newValue in
             popupModel.allSegments = newValue
         }

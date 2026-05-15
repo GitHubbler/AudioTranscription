@@ -2,6 +2,7 @@
 import AppKit
 #endif
 import SwiftUI
+import AVFoundation
 
 @MainActor
 final class SegmentsReaderModel: ObservableObject {
@@ -9,12 +10,58 @@ final class SegmentsReaderModel: ObservableObject {
     @Published private(set) var segments: [ReaderSegment] = []
     @Published private(set) var statusText = "Open segmented JSON"
     @Published private(set) var errorText: String?
+    @Published private(set) var playingSegmentID: Int?
 
     var isNotEmptySegments: Bool {
         !segments.isEmpty
     }
 
     private static let lastURLKey = "LastOpenedFileURL"
+    private var audioPlayer: AVPlayer?
+    private var timeObserver: Any?
+
+    func playAudio(for segment: ReaderSegment) {
+        if playingSegmentID == segment.id {
+            stopAudio()
+            return
+        }
+
+        stopAudio()
+
+        guard let inPoint = segment.record.audioInPoint,
+              let outPoint = segment.record.audioOutPoint,
+              let audioName = segment.record.sourceAudio,
+              let jsonURL = fileURL else {
+            return
+        }
+
+        let audioURL = jsonURL.deletingLastPathComponent().appendingPathComponent(audioName)
+        let playerItem = AVPlayerItem(url: audioURL)
+        let player = AVPlayer(playerItem: playerItem)
+        
+        player.seek(to: CMTime(seconds: inPoint, preferredTimescale: 600))
+        player.play()
+        
+        playingSegmentID = segment.id
+        
+        timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 10), queue: .main) { [weak self] time in
+            if time.seconds >= outPoint {
+                self?.stopAudio()
+            }
+        }
+        
+        self.audioPlayer = player
+    }
+
+    func stopAudio() {
+        if let observer = timeObserver {
+            audioPlayer?.removeTimeObserver(observer)
+            timeObserver = nil
+        }
+        audioPlayer?.pause()
+        audioPlayer = nil
+        playingSegmentID = nil
+    }
 
     func openFile() {
 #if os(macOS)
@@ -47,6 +94,7 @@ final class SegmentsReaderModel: ObservableObject {
             }
             errorText = nil
             statusText = "Loaded \(segments.count) segments"
+            stopAudio()
         } catch {
             errorText = error.localizedDescription
             statusText = "Could not load JSON"

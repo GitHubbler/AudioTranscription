@@ -7,6 +7,8 @@ struct SegmentGroupView: View {
     @State private var showsPhoneticGrid = false
     @State private var showsIPA = false
 
+    @EnvironmentObject private var model: SegmentsReaderModel
+
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 5) {
@@ -20,8 +22,20 @@ struct SegmentGroupView: View {
 
             Spacer(minLength: 8)
 
-            if segment.record.isAbleToShowPhoneticGrid {
-                VStack(spacing: 8) {
+            VStack(spacing: 8) {
+                if segment.record.sourceAudio != nil, segment.record.audioInPoint != nil {
+                    Button {
+                        model.playAudio(for: segment)
+                    } label: {
+                        Image(systemName: model.playingSegmentID == segment.id ? "stop.fill" : "play.fill")
+                            .frame(width: 18, height: 18)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(model.playingSegmentID == segment.id ? .blue : .secondary)
+                    .help(model.playingSegmentID == segment.id ? "Stop playback" : "Play audio")
+                }
+
+                if segment.record.isAbleToShowPhoneticGrid {
                     Button {
                         showsPhoneticGrid.toggle()
                     } label: {

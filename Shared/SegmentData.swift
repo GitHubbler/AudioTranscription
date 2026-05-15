@@ -10,6 +10,9 @@ enum AnnotationSource: String, Codable, Sendable {
 }
 
 struct TextSegmentValue: Codable, Equatable, Sendable {
+    let sourceAudio: String?
+    let audioInPoint: TimeInterval?
+    let audioOutPoint: TimeInterval?
     let sourceLang: String
     let enText: String
     let zhText: String
@@ -21,6 +24,9 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
     let zhLexicalUnits: [ChineseLexicalUnit]
 
     enum CodingKeys: String, CodingKey {
+        case sourceAudio
+        case audioInPoint
+        case audioOutPoint
         case sourceLang
         case enText
         case zhText
@@ -32,7 +38,16 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         case zhLexicalUnits
     }
 
-    init(sourceLang: String = "und", sourceText: String = "") {
+    init(
+        sourceAudio: String? = nil,
+        audioInPoint: TimeInterval? = nil,
+        audioOutPoint: TimeInterval? = nil,
+        sourceLang: String = "und",
+        sourceText: String = ""
+    ) {
+        self.sourceAudio = sourceAudio
+        self.audioInPoint = audioInPoint
+        self.audioOutPoint = audioOutPoint
         self.sourceLang = sourceLang
         zhLatnPinyin = ""
         ipa = ""
@@ -69,6 +84,9 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
     }
 
     init(
+        sourceAudio: String? = nil,
+        audioInPoint: TimeInterval? = nil,
+        audioOutPoint: TimeInterval? = nil,
         sourceLang: String,
         enText: String,
         zhText: String,
@@ -79,6 +97,9 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         zhCharacterUnits: [ChineseCharacterUnit] = [],
         zhLexicalUnits: [ChineseLexicalUnit] = []
     ) {
+        self.sourceAudio = sourceAudio
+        self.audioInPoint = audioInPoint
+        self.audioOutPoint = audioOutPoint
         self.sourceLang = sourceLang
         self.enText = enText
         self.zhText = zhText
@@ -92,6 +113,9 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        sourceAudio = try container.decodeIfPresent(String.self, forKey: .sourceAudio)
+        audioInPoint = try container.decodeIfPresent(TimeInterval.self, forKey: .audioInPoint)
+        audioOutPoint = try container.decodeIfPresent(TimeInterval.self, forKey: .audioOutPoint)
         sourceLang = try container.decodeIfPresent(String.self, forKey: .sourceLang) ?? "und"
         enText = try container.decodeIfPresent(String.self, forKey: .enText) ?? ""
         zhText = try container.decodeIfPresent(String.self, forKey: .zhText) ?? ""
@@ -105,6 +129,15 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        if let sourceAudio, !sourceAudio.isEmpty {
+            try container.encode(sourceAudio, forKey: .sourceAudio)
+        }
+        if let audioInPoint {
+            try container.encode(audioInPoint, forKey: .audioInPoint)
+        }
+        if let audioOutPoint {
+            try container.encode(audioOutPoint, forKey: .audioOutPoint)
+        }
         try container.encode(sourceLang, forKey: .sourceLang)
         try container.encode(enText, forKey: .enText)
         try container.encode(zhText, forKey: .zhText)
@@ -224,6 +257,9 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
     }
 
     func copy(
+        sourceAudio: String? = nil,
+        audioInPoint: TimeInterval? = nil,
+        audioOutPoint: TimeInterval? = nil,
         enText: String? = nil,
         zhText: String? = nil,
         deText: String? = nil,
@@ -234,6 +270,9 @@ struct TextSegmentValue: Codable, Equatable, Sendable {
         zhLexicalUnits: [ChineseLexicalUnit]? = nil
     ) -> TextSegmentValue {
         TextSegmentValue(
+            sourceAudio: sourceAudio ?? self.sourceAudio,
+            audioInPoint: audioInPoint ?? self.audioInPoint,
+            audioOutPoint: audioOutPoint ?? self.audioOutPoint,
             sourceLang: sourceLang,
             enText: enText ?? self.enText,
             zhText: zhText ?? self.zhText,

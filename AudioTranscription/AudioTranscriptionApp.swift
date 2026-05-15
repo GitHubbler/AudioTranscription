@@ -366,9 +366,10 @@ final class TranscriptionModel: ObservableObject {
 
     private func localizedSegments(from text: String) -> [TextSegment] {
         let sourceLang = currentSourceLanguageCode
+        let audioURI = selectedAudioURL?.lastPathComponent
         return segmenter
             .sentenceSegments(from: text, context: segmentationContext)
-            .map { $0.withSourceLanguage(sourceLang) }
+            .map { $0.withSourceLanguage(sourceLang, sourceAudio: audioURI) }
     }
 
     private func segmentRecordsForCurrentText() -> [TextSegmentValue] {

@@ -4,14 +4,22 @@ struct TextSegment: Identifiable, Equatable, Sendable {
     let id: Int
     let text: String
     let sourceRange: Range<String.Index>?
+    let audioRange: Range<TimeInterval>?
     let localValue: TextSegmentValue
 
-    func withSourceLanguage(_ sourceLang: String) -> TextSegment {
+    func withSourceLanguage(_ sourceLang: String, sourceAudio: String? = nil) -> TextSegment {
         TextSegment(
             id: id,
             text: text,
             sourceRange: sourceRange,
-            localValue: TextSegmentValue(sourceLang: sourceLang, sourceText: text)
+            audioRange: audioRange,
+            localValue: TextSegmentValue(
+                sourceAudio: sourceAudio,
+                audioInPoint: audioRange?.lowerBound,
+                audioOutPoint: audioRange?.upperBound,
+                sourceLang: sourceLang,
+                sourceText: text
+            )
         )
     }
 }
@@ -43,10 +51,10 @@ struct TextSegmenter {
             }
 
             if sentences.isEmpty {
-                appendSegment(from: block, in: text, to: &segments)
+                appendSegment(from: block, in: text, to: &segments, context: context)
             } else {
                 for sentence in sentences {
-                    appendSegment(from: sentence, in: text, to: &segments)
+                    appendSegment(from: sentence, in: text, to: &segments, context: context)
                 }
             }
         }
@@ -56,6 +64,7 @@ struct TextSegmenter {
                 id: index + 1,
                 text: segment.text,
                 sourceRange: segment.sourceRange,
+                audioRange: segment.audioRange,
                 localValue: segment.localValue
             )
         }
@@ -490,19 +499,35 @@ struct TextSegmenter {
     private func appendSegment(
         from range: Range<String.Index>,
         in text: String,
-        to segments: inout [TextSegment]
+        to segments: inout [TextSegment],
+        context: TextSegmentationContext
     ) {
         let trimmedRange = trimmedRange(range, in: text)
         guard let trimmedRange else { return }
 
         let trimmedText = String(text[trimmedRange])
+        let segmentAudioRange = audioRange(for: trimmedRange, in: text, context: context)
+
         if isStandaloneSentencePunctuation(trimmedText), let previous = segments.last {
             let mergedRange = previous.sourceRange?.lowerBound ?? trimmedRange.lowerBound
+            let mergedAudio = {
+                if let prevAudio = previous.audioRange, let currAudio = segmentAudioRange {
+                    return prevAudio.lowerBound..<max(prevAudio.upperBound, currAudio.upperBound)
+                }
+                return previous.audioRange ?? segmentAudioRange
+            }()
             segments[segments.count - 1] = TextSegment(
                 id: previous.id,
                 text: previous.text + trimmedText,
                 sourceRange: mergedRange..<trimmedRange.upperBound,
-                localValue: TextSegmentValue(sourceText: previous.text + trimmedText)
+                audioRange: mergedAudio,
+                localValue: TextSegmentValue(
+                    sourceAudio: previous.localValue.sourceAudio,
+                    audioInPoint: mergedAudio?.lowerBound,
+                    audioOutPoint: mergedAudio?.upperBound,
+                    sourceLang: previous.localValue.sourceLang,
+                    sourceText: previous.text + trimmedText
+                )
             )
             return
         }
@@ -511,9 +536,61 @@ struct TextSegmenter {
             id: segments.count + 1,
             text: trimmedText,
             sourceRange: trimmedRange,
-            localValue: TextSegmentValue(sourceText: trimmedText)
+            audioRange: segmentAudioRange,
+            localValue: TextSegmentValue(
+                sourceAudio: nil,
+                audioInPoint: segmentAudioRange?.lowerBound,
+                audioOutPoint: segmentAudioRange?.upperBound,
+                sourceLang: "und",
+                sourceText: trimmedText
+            )
         )
         segments.append(segment)
+    }
+
+    private func audioRange(for sourceRange: Range<String.Index>, in text: String, context: TextSegmentationContext) -> Range<TimeInterval>? {
+        let segments = context.timedSegments.filter { !$0.text.isEmpty }.sorted { $0.start < $1.start }
+        guard !segments.isEmpty else { return nil }
+
+        let textLength = text.count
+        guard textLength > 0 else { return nil }
+
+        let lowerOffset = text.distance(from: text.startIndex, to: sourceRange.lowerBound)
+        let upperOffset = text.distance(from: text.startIndex, to: sourceRange.upperBound)
+
+        let lowerRatio = max(0, min(1.0, Double(lowerOffset) / Double(textLength)))
+        let upperRatio = max(0, min(1.0, Double(upperOffset) / Double(textLength)))
+
+        let originalLength = segments.reduce(0) { length, segment in
+            length + segment.text.count + 1
+        }
+
+        let targetLower = Int(lowerRatio * Double(originalLength))
+        let targetUpper = Int(upperRatio * Double(originalLength))
+
+        var inPoint: TimeInterval?
+        var outPoint: TimeInterval?
+
+        var currentOffset = 0
+        for segment in segments {
+            let segmentLength = segment.text.count + 1
+            
+            if inPoint == nil, targetLower <= currentOffset + segmentLength {
+                inPoint = segment.start
+            }
+            
+            if targetUpper <= currentOffset + segmentLength {
+                outPoint = segment.end
+                break
+            }
+            
+            currentOffset += segmentLength
+        }
+
+        let finalIn = inPoint ?? segments.first!.start
+        let finalOut = outPoint ?? segments.last!.end
+
+        return finalIn..<max(finalIn, finalOut)
     }
 
     private func trimmedRange(_ range: Range<String.Index>, in text: String) -> Range<String.Index>? {

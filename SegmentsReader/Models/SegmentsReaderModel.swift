@@ -24,10 +24,13 @@ final class SegmentsReaderModel {
         didSet { UserDefaults.standard.set(loopGap, forKey: Self.loopGapKey) }
     }
 
-    /// Seconds added to every segment's in/out points at playback time.
-    /// Compensates for leading silence in the audio source. Default is 0.
     var timeOffset: Double = 0.0 {
         didSet { UserDefaults.standard.set(timeOffset, forKey: Self.timeOffsetKey) }
+    }
+    
+    /// Seconds added to every segment's out point at playback time. Default is 0.
+    var outpointOffset: Double = 0.0 {
+        didSet { UserDefaults.standard.set(outpointOffset, forKey: Self.outpointOffsetKey) }
     }
 
     var isNotEmptySegments: Bool { !segments.isEmpty }
@@ -39,6 +42,7 @@ final class SegmentsReaderModel {
     private static let isLoopingKey  = "IsLooping"
     private static let loopGapKey    = "LoopGap"
     private static let timeOffsetKey = "TimeOffset"
+    private static let outpointOffsetKey = "OutpointOffset"
 
     // These properties change frequently during playback and must never
     // trigger view observation updates.
@@ -57,6 +61,7 @@ final class SegmentsReaderModel {
         isLooping  = ud.bool(forKey: Self.isLoopingKey)
         loopGap    = ud.double(forKey: Self.loopGapKey)
         timeOffset = ud.double(forKey: Self.timeOffsetKey)
+        outpointOffset = ud.double(forKey: Self.outpointOffsetKey)
     }
 
     // MARK: - Public interface
@@ -84,9 +89,9 @@ final class SegmentsReaderModel {
               let audioName = segment.record.sourceAudio,
               let jsonURL = fileURL else { return }
 
-        // Apply the calibration offset; clamp in-point to ≥ 0.
+        // Apply the calibration offsets; clamp in-point to ≥ 0.
         let inPoint  = max(0, rawInPoint  + timeOffset)
-        let outPoint = max(inPoint + 0.01, rawOutPoint + timeOffset)
+        let outPoint = max(inPoint + 0.01, rawOutPoint + outpointOffset)
 
         let audioURL = jsonURL.deletingLastPathComponent().appendingPathComponent(audioName)
         let playerItem = AVPlayerItem(url: audioURL)

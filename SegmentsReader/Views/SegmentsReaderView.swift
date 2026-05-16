@@ -110,7 +110,32 @@ struct SegmentsReaderView: View {
                             )
                             .labelsHidden()
                         }
+        
+        // Outpoint offset UI
+        HStack(spacing: 2) {
+            Text("Outpoint Offset")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
+            TextField(
+                "",
+                value: m.outpointOffset,
+                format: .number.precision(.fractionLength(1))
+            )
+            .frame(width: 54)
+            .multilineTextAlignment(.trailing)
+
+            Text("s")
+                .foregroundStyle(.secondary)
+
+            Stepper(
+                "",
+                value: m.outpointOffset,
+                in: -20...20,
+                step: 0.1
+            )
+            .labelsHidden()
+        }
                         Picker("Speed", selection: speedBinding) {
                             Text("0.5x").tag(Float(0.5))
                             Text("0.75x").tag(Float(0.75))

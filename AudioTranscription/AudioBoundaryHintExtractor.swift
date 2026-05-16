@@ -22,36 +22,45 @@ struct AudioBoundaryHintExtractor: Sendable {
     var leadingMargin: TimeInterval = 0.3
     var trailingMargin: TimeInterval = 0.5
 
-    func analyze(fileURL: URL) throws -> AudioBoundaryAnalysis {
+    func analyze(fileURL: URL, progressHandler: (@Sendable (Double) -> Void)? = nil) throws -> AudioBoundaryAnalysis {
         let audioFile = try AVAudioFile(forReading: fileURL)
         let sampleRate = audioFile.processingFormat.sampleRate
         let duration = sampleRate > 0 ? Double(audioFile.length) / sampleRate : 0
         guard sampleRate > 0, duration > 0 else {
+            progressHandler?(1.0)
             return AudioBoundaryAnalysis(duration: duration, hints: [])
         }
 
-        let windows = try amplitudeWindows(from: audioFile, sampleRate: sampleRate)
+        let windows = try amplitudeWindows(from: audioFile, sampleRate: sampleRate, progressHandler: progressHandler)
         guard !windows.isEmpty else {
+            progressHandler?(1.0)
             return AudioBoundaryAnalysis(duration: duration, hints: [])
         }
 
         let threshold = silenceThreshold(for: windows.map(\.decibels))
         let hints = silenceSpans(in: windows, duration: duration, threshold: threshold)
 
+        progressHandler?(1.0)
         return AudioBoundaryAnalysis(duration: duration, hints: hints)
     }
 
-    private func amplitudeWindows(from audioFile: AVAudioFile, sampleRate: Double) throws -> [AmplitudeWindow] {
+    private func amplitudeWindows(
+        from audioFile: AVAudioFile,
+        sampleRate: Double,
+        progressHandler: (@Sendable (Double) -> Void)?
+    ) throws -> [AmplitudeWindow] {
         let frameCapacity = AVAudioFrameCount(max(1, Int(sampleRate * windowDuration)))
         guard let buffer = AVAudioPCMBuffer(pcmFormat: audioFile.processingFormat, frameCapacity: frameCapacity) else {
             return []
         }
 
         var windows: [AmplitudeWindow] = []
+        let totalFrames = audioFile.length
+        var lastReportedProgress: Double = 0.0
 
-        while audioFile.framePosition < audioFile.length {
+        while audioFile.framePosition < totalFrames {
             let startFrame = audioFile.framePosition
-            let remainingFrames = AVAudioFrameCount(audioFile.length - startFrame)
+            let remainingFrames = AVAudioFrameCount(totalFrames - startFrame)
             try audioFile.read(into: buffer, frameCount: min(frameCapacity, remainingFrames))
 
             let frameLength = Int(buffer.frameLength)
@@ -64,6 +73,12 @@ struct AudioBoundaryHintExtractor: Sendable {
                 duration: duration,
                 decibels: decibels(in: buffer, frameLength: frameLength)
             ))
+
+            let currentProgress = Double(audioFile.framePosition) / Double(totalFrames)
+            if currentProgress - lastReportedProgress >= 0.05 {
+                lastReportedProgress = currentProgress
+                progressHandler?(currentProgress)
+            }
         }
 
         return windows

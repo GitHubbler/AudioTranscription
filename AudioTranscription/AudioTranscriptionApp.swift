@@ -171,6 +171,7 @@ final class TranscriptionModel: ObservableObject {
 
     func stopTranscription() {
         guard state == .transcribing else { return }
+        statusText = "Stopping transcription..."
         transcriptionTask?.cancel()
     }
 
@@ -306,32 +307,63 @@ final class TranscriptionModel: ObservableObject {
             }
 
             try await session.prepareTranslation()
-            let responses = try await session.translations(from: requests)
+            let totalRequests = Double(requests.count)
+            var processedRequests = 0
 
-            for response in responses {
-                guard let identifier = response.clientIdentifier,
-                      let index = Int(identifier),
-                      updatedRecords.indices.contains(index) else {
-                    continue
+            var chunkStart = 0
+            while chunkStart < requests.count {
+                try Task.checkCancellation()
+                let chunkEnd = min(chunkStart + 10, requests.count)
+                let chunk = Array(requests[chunkStart..<chunkEnd])
+
+                let responses = try await session.translations(from: chunk)
+
+                for response in responses {
+                    guard let identifier = response.clientIdentifier,
+                          let index = Int(identifier),
+                          updatedRecords.indices.contains(index) else {
+                        continue
+                    }
+
+                    updatedRecords[index] = updatedRecords[index].fillingCounterpart(
+                        with: response.targetText
+                    )
                 }
 
-                updatedRecords[index] = updatedRecords[index].fillingCounterpart(
-                    with: response.targetText
-                )
+                processedRequests += chunk.count
+                let currentProgress = Double(processedRequests) / totalRequests
+                await MainActor.run { self.progress = currentProgress * 0.5 } // 50% for translation
+                chunkStart = chunkEnd
             }
 
-            updatedRecords = updatedRecords.map { $0.fillingPhonetics(cache: annotationCache) }
+            var finalRecords: [TextSegmentValue] = []
+            finalRecords.reserveCapacity(updatedRecords.count)
+            for (i, record) in updatedRecords.enumerated() {
+                try Task.checkCancellation()
+                finalRecords.append(record.fillingPhonetics(cache: annotationCache))
+                if i % 10 == 0 {
+                    let phoneticsProgress = Double(i) / Double(updatedRecords.count)
+                    let currentProgress = 0.5 + (phoneticsProgress * 0.5)
+                    await MainActor.run { self.progress = currentProgress }
+                    await Task.yield()
+                }
+            }
+            updatedRecords = finalRecords
+
             jsonText = try renderSegmentRecords(updatedRecords)
             editorMode = .json
-            statusText = "Translated \(responses.count) segments into editable JSON"
+            statusText = "Translated \(processedRequests) segments into editable JSON"
         } catch is CancellationError {
             statusText = "Translation cancelled"
+            progress = nil
         } catch {
             state = .failed
             statusText = error.localizedDescription
+            progress = nil
         }
 
         cancelPendingTranslation()
+        progress = nil
     }
 
     private var defaultSaveName: String {
@@ -479,13 +511,16 @@ final class TranscriptionModel: ObservableObject {
         do {
             let extractor = audioHintExtractor
             let analysis = try await Task.detached(priority: .userInitiated) {
-                try extractor.analyze(fileURL: url)
+                try extractor.analyze(fileURL: url) { progress in
+                    Task { @MainActor in self.progress = progress }
+                }
             }.value
 
             guard selectedAudioURL == url else { return }
             audioDuration = analysis.duration
             audioBoundaryHints = analysis.hints
             audioHintTask = nil
+            progress = nil
 
             if isToUpdateStatus, state != .transcribing {
                 statusText = state == .completed && !transcriptText.isEmpty

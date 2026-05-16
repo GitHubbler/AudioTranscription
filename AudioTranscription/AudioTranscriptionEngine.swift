@@ -262,7 +262,7 @@ struct AudioTranscriptionEngine {
             
             if audioDuration > 0 {
                 let currentEnd = result.range.end.safeSeconds
-                await eventHandler(.progress(min(1.0, currentEnd / audioDuration)))
+                await eventHandler(.progress(min(0.99, currentEnd / audioDuration)))
             }
         }
 
@@ -357,6 +357,7 @@ struct AudioTranscriptionEngine {
                         } else {
                             Task {
                                 await eventHandler(.status("Detected \(displayName(for: locale))"))
+                                await eventHandler(.progress(1.0))
                             }
                             continuation.resume(returning: TranscriptionDraft(
                                 text: trimmedText,
@@ -379,7 +380,7 @@ struct AudioTranscriptionEngine {
 
                             if audioDuration > 0, let lastSegment = result.bestTranscription.segments.last {
                                 let end = lastSegment.timestamp + lastSegment.duration
-                                await eventHandler(.progress(min(1.0, end / audioDuration)))
+                                await eventHandler(.progress(min(0.99, end / audioDuration)))
                             }
 
                             if result.isFinal || cancelled {

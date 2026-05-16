@@ -54,16 +54,38 @@ struct SegmentsReaderView: View {
                 Spacer()
 
                 if model.isNotEmptySegments {
-                    Picker("Speed", selection: $model.playbackSpeed) {
-                        Text("0.5x").tag(Float(0.5))
-                        Text("0.75x").tag(Float(0.75))
-                        Text("1.0x").tag(Float(1.0))
-                        Text("1.25x").tag(Float(1.25))
-                        Text("1.5x").tag(Float(1.5))
-                        Text("2.0x").tag(Float(2.0))
+                    HStack(spacing: 12) {
+                        HStack(spacing: 4) {
+                            Toggle("Loop", isOn: $model.isLooping)
+                                .toggleStyle(.checkbox)
+                            
+                            if model.isLooping {
+                                Picker("", selection: $model.loopGap) {
+                                    Text("0.0s gap").tag(TimeInterval(0.0))
+                                    Text("0.5s gap").tag(TimeInterval(0.5))
+                                    Text("1.0s gap").tag(TimeInterval(1.0))
+                                    Text("1.5s gap").tag(TimeInterval(1.5))
+                                    Text("2.0s gap").tag(TimeInterval(2.0))
+                                    Text("2.5s gap").tag(TimeInterval(2.5))
+                                    Text("3.0s gap").tag(TimeInterval(3.0))
+                                }
+                                .labelsHidden()
+                                .pickerStyle(.menu)
+                                .frame(width: 90)
+                            }
+                        }
+                        
+                        Picker("Speed", selection: $model.playbackSpeed) {
+                            Text("0.5x").tag(Float(0.5))
+                            Text("0.75x").tag(Float(0.75))
+                            Text("1.0x").tag(Float(1.0))
+                            Text("1.25x").tag(Float(1.25))
+                            Text("1.5x").tag(Float(1.5))
+                            Text("2.0x").tag(Float(2.0))
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 110)
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 110)
                 }
 
                 Button(action: presentFilePicker) {

@@ -22,6 +22,9 @@ final class SegmentsReaderModel: ObservableObject {
             }
         }
     }
+    
+    @Published var isLooping: Bool = false
+    @Published var loopGap: TimeInterval = 0.0
 
     var isNotEmptySegments: Bool {
         !segments.isEmpty
@@ -30,6 +33,8 @@ final class SegmentsReaderModel: ObservableObject {
     private static let lastURLKey = "LastOpenedFileURL"
     private var audioPlayer: AVPlayer?
     private var timeObserver: Any?
+    private var loopTask: Task<Void, Never>?
+    private var isSchedulingLoop = false
 
     func playAudio(for segment: ReaderSegment) {
         if playingSegmentID == segment.id {
@@ -56,8 +61,8 @@ final class SegmentsReaderModel: ObservableObject {
         let inTime = CMTime(seconds: inPoint, preferredTimescale: 600)
         let outTime = CMTime(seconds: outPoint, preferredTimescale: 600)
         
-        // Natively stops the player at the outPoint
-        playerItem.forwardPlaybackEndTime = outTime
+        // forwardPlaybackEndTime is intentionally not set here;
+        // the boundary time observer handles stop/loop at outPoint.
         
         Task {
             // Exact seek is required to prevent snapping to the start of compressed audio files
@@ -69,22 +74,57 @@ final class SegmentsReaderModel: ObservableObject {
             player.defaultRate = self.playbackSpeed
             player.play()
             
-            self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 10), queue: .main) { [weak self, weak player] time in
-                Task { @MainActor in
-                    guard let self = self, let player = player else { return }
-                    
-                    // Reset UI if we hit the out point or if playback naturally stopped (rate == 0) after starting
-                    if time.seconds >= outPoint || (player.rate == 0 && time.seconds > inPoint + 0.1) {
-                        if self.playingSegmentID == segment.id {
-                            self.stopAudio()
-                        }
-                    }
+            self.addTimeObserver(for: segment, player: player, inPoint: inPoint, outPoint: outPoint, inTime: inTime)
+        }
+    }
+    
+    private func addTimeObserver(for segment: ReaderSegment, player: AVPlayer, inPoint: Double, outPoint: Double, inTime: CMTime) {
+        // A boundary observer fires during playback the moment the playhead
+        // reaches outPoint — before the player can stop — so loop logic runs.
+        let outTimeValue = NSValue(time: CMTime(seconds: outPoint, preferredTimescale: 600))
+        self.timeObserver = player.addBoundaryTimeObserver(forTimes: [outTimeValue], queue: .main) { [weak self, weak player] in
+            Task { @MainActor in
+                guard let self = self, let player = player else { return }
+                guard self.playingSegmentID == segment.id, !self.isSchedulingLoop else { return }
+
+                if self.isLooping {
+                    self.scheduleLoop(for: segment, player: player, inPoint: inPoint, outPoint: outPoint, inTime: inTime)
+                } else {
+                    self.stopAudio()
                 }
             }
         }
     }
+    
+    private func scheduleLoop(for segment: ReaderSegment, player: AVPlayer, inPoint: Double, outPoint: Double, inTime: CMTime) {
+        self.isSchedulingLoop = true
+        player.pause()
+        
+        loopTask = Task {
+            if self.loopGap > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(self.loopGap * 1_000_000_000))
+            }
+            guard !Task.isCancelled, self.playingSegmentID == segment.id else { return }
+            
+            if !self.isLooping {
+                self.stopAudio()
+                return
+            }
+            
+            let _ = await player.seek(to: inTime, toleranceBefore: .zero, toleranceAfter: .zero)
+            guard !Task.isCancelled, self.playingSegmentID == segment.id else { return }
+            
+            self.isSchedulingLoop = false
+            player.defaultRate = self.playbackSpeed
+            player.play()
+        }
+    }
 
     func stopAudio() {
+        loopTask?.cancel()
+        loopTask = nil
+        isSchedulingLoop = false
+        
         if let observer = timeObserver {
             audioPlayer?.removeTimeObserver(observer)
             timeObserver = nil

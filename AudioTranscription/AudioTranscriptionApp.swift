@@ -32,6 +32,7 @@ final class TranscriptionModel: ObservableObject {
 
     @Published var state: State = .idle
     @Published var statusText = "Choose audio or text"
+    @Published var progress: Double?
     @Published var transcriptText = ""
     @Published var jsonText = ""
     @Published var editorMode = EditorMode.text
@@ -134,6 +135,7 @@ final class TranscriptionModel: ObservableObject {
         transcriptionTask?.cancel()
         setDraftText("")
         transcriptionDraft = nil
+        progress = nil
         state = .transcribing
         statusText = "Preparing transcription..."
 
@@ -148,20 +150,28 @@ final class TranscriptionModel: ObservableObject {
                     self.transcriptionDraft = draft
                     self.setDraftText(draft.text)
                     self.state = .completed
-                    self.statusText = self.draftReadyStatus
+                    self.progress = nil
+                    self.statusText = Task.isCancelled ? "Transcription stopped" : self.draftReadyStatus
                 }
             } catch is CancellationError {
                 await MainActor.run {
                     self.state = self.selectedAudioURL == nil ? .idle : .fileSelected
-                    self.statusText = "Transcription cancelled"
+                    self.progress = nil
+                    self.statusText = "Transcription stopped"
                 }
             } catch {
                 await MainActor.run {
                     self.state = .failed
+                    self.progress = nil
                     self.statusText = error.localizedDescription
                 }
             }
         }
+    }
+
+    func stopTranscription() {
+        guard state == .transcribing else { return }
+        transcriptionTask?.cancel()
     }
 
     func segmentCurrentText() {
@@ -187,6 +197,8 @@ final class TranscriptionModel: ObservableObject {
             statusText = message
         case .transcript(let text):
             setDraftText(text)
+        case .progress(let value):
+            progress = value
         }
     }
 
@@ -565,11 +577,18 @@ struct ContentView: View {
                 .disabled(!model.isAbleToOpen)
                 .keyboardShortcut("o")
 
-                Button(action: model.startTranscription) {
-                    Label("Start", systemImage: "play.fill")
+                if model.state == .transcribing {
+                    Button(action: model.stopTranscription) {
+                        Label("Stop", systemImage: "stop.fill")
+                    }
+                    .keyboardShortcut(.escape, modifiers: [])
+                } else {
+                    Button(action: model.startTranscription) {
+                        Label("Start", systemImage: "play.fill")
+                    }
+                    .disabled(!model.isAbleToStart)
+                    .keyboardShortcut(.return)
                 }
-                .disabled(!model.isAbleToStart)
-                .keyboardShortcut(.return)
 
                 Button(action: model.segmentCurrentText) {
                     Label("Segment", systemImage: "text.line.first.and.arrowtriangle.forward")
@@ -619,13 +638,32 @@ struct ContentView: View {
     }
 
     private var statusChip: some View {
-        Label(model.statusText, systemImage: statusIcon)
-            .font(.caption)
-            .lineLimit(1)
-            .truncationMode(.middle)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        HStack(spacing: 6) {
+            if isWorking {
+                if let progress = model.progress {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.circular)
+                        .controlSize(.small)
+                } else {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+            } else {
+                Image(systemName: statusIcon)
+            }
+            
+            Text(model.statusText)
+                .font(.caption)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var isWorking: Bool {
+        model.state == .transcribing || model.isTranslating || model.statusText.contains("...")
     }
 
     private var statusIcon: String {

@@ -6,6 +6,7 @@ import Speech
 enum TranscriptionEvent: Sendable {
     case status(String)
     case transcript(String)
+    case progress(Double)
 }
 
 struct TimedTranscriptionSegment: Sendable {
@@ -167,13 +168,19 @@ struct AudioTranscriptionEngine {
         await eventHandler(.status("Transcribing \(displayName(for: locale))..."))
 
         let audioFile = try AVAudioFile(forReading: fileURL)
+        let audioDuration = Double(audioFile.length) / audioFile.fileFormat.sampleRate
+
         let analyzer = SpeechAnalyzer(
             modules: modules,
             options: .init(priority: .userInitiated, modelRetention: .whileInUse)
         )
 
         let resultsTask = Task {
-            try await collectModernResults(from: transcriber, eventHandler: eventHandler)
+            try await collectModernResults(
+                from: transcriber,
+                audioDuration: audioDuration,
+                eventHandler: eventHandler
+            )
         }
 
         do {
@@ -182,11 +189,23 @@ struct AudioTranscriptionEngine {
             let draft = try await resultsTask.value
             guard !draft.text.isEmpty else { throw AudioTranscriptionError.emptyTranscription }
             await eventHandler(.status("Detected \(displayName(for: locale))"))
+            await eventHandler(.progress(1.0))
             return TranscriptionDraft(
                 text: draft.text,
                 timedSegments: draft.timedSegments,
                 localeIdentifier: locale.identifier
             )
+        } catch is CancellationError {
+            resultsTask.cancel()
+            let draft = try? await resultsTask.value
+            if let draft, !draft.text.isEmpty {
+                return TranscriptionDraft(
+                    text: draft.text,
+                    timedSegments: draft.timedSegments,
+                    localeIdentifier: locale.identifier
+                )
+            }
+            throw CancellationError()
         } catch {
             resultsTask.cancel()
             throw error
@@ -220,13 +239,14 @@ struct AudioTranscriptionEngine {
     @available(macOS 26.0, *)
     private func collectModernResults(
         from transcriber: SpeechTranscriber,
+        audioDuration: TimeInterval,
         eventHandler: EventHandler
     ) async throws -> TranscriptionDraft {
         var finalizedSegments: [TimedTranscriptionSegment] = []
         var volatileSegment: TimedTranscriptionSegment?
 
         for try await result in transcriber.results {
-            try Task.checkCancellation()
+            if Task.isCancelled { break }
 
             let segment = TimedTranscriptionSegment(result: result)
             guard !segment.text.isEmpty else { continue }
@@ -239,6 +259,11 @@ struct AudioTranscriptionEngine {
             }
 
             await eventHandler(.transcript(renderText(finalizedSegments, volatileSegment: volatileSegment)))
+            
+            if audioDuration > 0 {
+                let currentEnd = result.range.end.safeSeconds
+                await eventHandler(.progress(min(1.0, currentEnd / audioDuration)))
+            }
         }
 
         return TranscriptionDraft(
@@ -294,61 +319,88 @@ struct AudioTranscriptionEngine {
         await eventHandler(.status("Trying \(displayName(for: locale))..."))
         await eventHandler(.status("Transcribing \(displayName(for: locale))..."))
 
+        let audioFile = try? AVAudioFile(forReading: fileURL)
+        let audioDuration = audioFile.map { Double($0.length) / $0.fileFormat.sampleRate } ?? 0.0
+
         let request = SFSpeechURLRecognitionRequest(url: fileURL)
         request.shouldReportPartialResults = true
         if recognizer.supportsOnDeviceRecognition {
             request.requiresOnDeviceRecognition = true
         }
 
-        return try await withCheckedThrowingContinuation { continuation in
-            var didResume = false
-            var latestDraft = TranscriptionDraft(text: "", timedSegments: [], localeIdentifier: locale.identifier)
-            var recognitionTask: SFSpeechRecognitionTask?
+        actor TaskBox {
+            var task: SFSpeechRecognitionTask?
+            var isCancelled = false
+            func set(_ task: SFSpeechRecognitionTask?) { self.task = task }
+            func cancel() {
+                isCancelled = true
+                task?.cancel()
+            }
+        }
+        let taskBox = TaskBox()
 
-            func finish(_ result: Result<TranscriptionDraft, Error>) {
-                guard !didResume else { return }
-                didResume = true
-                if case .failure = result {
-                    recognitionTask?.cancel()
-                }
-                recognitionTask = nil
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                var didResume = false
+                var latestDraft = TranscriptionDraft(text: "", timedSegments: [], localeIdentifier: locale.identifier)
 
-                switch result {
-                case .success(let draft):
-                    let trimmedText = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if trimmedText.isEmpty {
-                        continuation.resume(throwing: AudioTranscriptionError.emptyTranscription)
-                    } else {
-                        Task {
-                            await eventHandler(.status("Detected \(displayName(for: locale))"))
+                func finish(_ result: Result<TranscriptionDraft, Error>) {
+                    guard !didResume else { return }
+                    didResume = true
+                    Task { await taskBox.set(nil) }
+
+                    switch result {
+                    case .success(let draft):
+                        let trimmedText = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if trimmedText.isEmpty {
+                            continuation.resume(throwing: AudioTranscriptionError.emptyTranscription)
+                        } else {
+                            Task {
+                                await eventHandler(.status("Detected \(displayName(for: locale))"))
+                            }
+                            continuation.resume(returning: TranscriptionDraft(
+                                text: trimmedText,
+                                timedSegments: draft.timedSegments,
+                                localeIdentifier: locale.identifier
+                            ))
                         }
-                        continuation.resume(returning: TranscriptionDraft(
-                            text: trimmedText,
-                            timedSegments: draft.timedSegments,
-                            localeIdentifier: locale.identifier
-                        ))
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
                     }
-                case .failure(let error):
-                    continuation.resume(throwing: error)
                 }
-            }
 
-            recognitionTask = recognizer.recognitionTask(with: request) { result, error in
-                if let result {
-                    latestDraft = TranscriptionDraft(result: result)
+                let task = recognizer.recognitionTask(with: request) { result, error in
                     Task {
-                        await eventHandler(.transcript(latestDraft.text))
-                    }
+                        let cancelled = await taskBox.isCancelled
+                        
+                        if let result {
+                            latestDraft = TranscriptionDraft(result: result)
+                            await eventHandler(.transcript(latestDraft.text))
 
-                    if result.isFinal {
-                        finish(.success(latestDraft))
+                            if audioDuration > 0, let lastSegment = result.bestTranscription.segments.last {
+                                let end = lastSegment.timestamp + lastSegment.duration
+                                await eventHandler(.progress(min(1.0, end / audioDuration)))
+                            }
+
+                            if result.isFinal || cancelled {
+                                finish(.success(latestDraft))
+                                return
+                            }
+                        }
+
+                        if let error {
+                            if cancelled && !latestDraft.text.isEmpty {
+                                finish(.success(latestDraft))
+                            } else {
+                                finish(.failure(error))
+                            }
+                        }
                     }
                 }
-
-                if let error {
-                    finish(.failure(error))
-                }
+                Task { await taskBox.set(task) }
             }
+        } onCancel: {
+            Task { await taskBox.cancel() }
         }
     }
 

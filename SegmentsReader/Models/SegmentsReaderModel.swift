@@ -14,6 +14,7 @@ final class SegmentsReaderModel: ObservableObject {
     
     @Published var playbackSpeed: Float = 1.0 {
         didSet {
+            UserDefaults.standard.set(playbackSpeed, forKey: Self.speedKey)
             if let player = audioPlayer {
                 player.defaultRate = playbackSpeed
                 if player.rate > 0 {
@@ -23,22 +24,42 @@ final class SegmentsReaderModel: ObservableObject {
         }
     }
     
-    @Published var isLooping: Bool = false
-    @Published var loopGap: TimeInterval = 0.0
+    @Published var isLooping: Bool = false {
+        didSet { UserDefaults.standard.set(isLooping, forKey: Self.isLoopingKey) }
+    }
+    @Published var loopGap: TimeInterval = 0.0 {
+        didSet { UserDefaults.standard.set(loopGap, forKey: Self.loopGapKey) }
+    }
 
     /// Seconds added to every segment's in/out points at playback time.
     /// Compensates for leading silence in the audio source. Default is 0.
-    @Published var timeOffset: Double = 0.0
+    @Published var timeOffset: Double = 0.0 {
+        didSet { UserDefaults.standard.set(timeOffset, forKey: Self.timeOffsetKey) }
+    }
 
     var isNotEmptySegments: Bool {
         !segments.isEmpty
     }
 
-    private static let lastURLKey = "LastOpenedFileURL"
+    private static let lastURLKey       = "LastOpenedFileURL"
+    private static let speedKey         = "PlaybackSpeed"
+    private static let isLoopingKey     = "IsLooping"
+    private static let loopGapKey       = "LoopGap"
+    private static let timeOffsetKey    = "TimeOffset"
     private var audioPlayer: AVPlayer?
     private var timeObserver: Any?
     private var loopTask: Task<Void, Never>?
     private var isSchedulingLoop = false
+
+    init() {
+        let ud = UserDefaults.standard
+        if let speed = ud.object(forKey: Self.speedKey) as? Float {
+            playbackSpeed = speed
+        }
+        isLooping  = ud.bool(forKey: Self.isLoopingKey)
+        loopGap    = ud.double(forKey: Self.loopGapKey)
+        timeOffset = ud.double(forKey: Self.timeOffsetKey)
+    }
 
     func playAudio(for segment: ReaderSegment) {
         if playingSegmentID == segment.id {

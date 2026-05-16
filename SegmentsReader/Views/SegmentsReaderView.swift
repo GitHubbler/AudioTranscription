@@ -53,6 +53,19 @@ struct SegmentsReaderView: View {
 
                 Spacer()
 
+                if model.isNotEmptySegments {
+                    Picker("Speed", selection: $model.playbackSpeed) {
+                        Text("0.5x").tag(Float(0.5))
+                        Text("0.75x").tag(Float(0.75))
+                        Text("1.0x").tag(Float(1.0))
+                        Text("1.25x").tag(Float(1.25))
+                        Text("1.5x").tag(Float(1.5))
+                        Text("2.0x").tag(Float(2.0))
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 110)
+                }
+
                 Button(action: presentFilePicker) {
                     Label("Open", systemImage: "folder")
                 }

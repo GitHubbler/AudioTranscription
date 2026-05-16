@@ -11,6 +11,17 @@ final class SegmentsReaderModel: ObservableObject {
     @Published private(set) var statusText = "Open segmented JSON"
     @Published private(set) var errorText: String?
     @Published private(set) var playingSegmentID: Int?
+    
+    @Published var playbackSpeed: Float = 1.0 {
+        didSet {
+            if let player = audioPlayer {
+                player.defaultRate = playbackSpeed
+                if player.rate > 0 {
+                    player.rate = playbackSpeed
+                }
+            }
+        }
+    }
 
     var isNotEmptySegments: Bool {
         !segments.isEmpty
@@ -55,6 +66,7 @@ final class SegmentsReaderModel: ObservableObject {
             // Ensure the user hasn't selected another segment while seeking
             guard self.playingSegmentID == segment.id else { return }
             
+            player.defaultRate = self.playbackSpeed
             player.play()
             
             self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 10), queue: .main) { [weak self, weak player] time in

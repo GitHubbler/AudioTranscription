@@ -5,7 +5,8 @@ struct PhoneticScoreView: View {
     let isShowingIPA: Bool
     let ipaFontSize: Double
     
-    @EnvironmentObject private var popupModel: PopupModel
+//    @EnvironmentObject private var popupModel: PopupModel
+    @Environment(PopupModel.self) var popupModel
 
     private var cellWidth: CGFloat {
         guard isShowingIPA else { return 58 }

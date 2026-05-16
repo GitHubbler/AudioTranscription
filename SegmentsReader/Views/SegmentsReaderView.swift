@@ -2,8 +2,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct SegmentsReaderView: View {
-    @StateObject private var model = SegmentsReaderModel()
-    @StateObject private var popupModel = PopupModel()
+    @State private var model = SegmentsReaderModel()
+    @State private var popupModel = PopupModel()
     @State private var isImporting = false
 
     var body: some View {
@@ -21,10 +21,10 @@ struct SegmentsReaderView: View {
         .overlay {
             CellPopupView()
         }
-        .environmentObject(popupModel)
-        .environmentObject(model)
-        .onChange(of: model.segments) { newValue in
-            popupModel.allSegments = newValue
+        .environment(popupModel)
+        .environment(model)
+        .onChange(of: model.segments) {
+            popupModel.allSegments = model.segments
         }
         .onAppear {
             popupModel.allSegments = model.segments
@@ -45,8 +45,19 @@ struct SegmentsReaderView: View {
         }
     }
 
+    // MARK: - Header
+    //
+    // Bindings for settable properties use Bindable(model) — the @Observable
+    // equivalent of $model from @StateObject.  playbackSpeed is private(set),
+    // so it gets an explicit Binding(get:set:) pointing at the setter method.
+
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let m = Bindable(model)
+        let speedBinding = Binding<Float>(
+            get: { model.playbackSpeed },
+            set: { model.setPlaybackSpeed($0) }
+        )
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Text("SegmentsReader")
                     .font(.title2.weight(.semibold))
@@ -56,11 +67,11 @@ struct SegmentsReaderView: View {
                 if model.isNotEmptySegments {
                     HStack(spacing: 12) {
                         HStack(spacing: 4) {
-                            Toggle("Loop", isOn: $model.isLooping)
+                            Toggle("Loop", isOn: m.isLooping)
                                 .toggleStyle(.checkbox)
-                            
+
                             if model.isLooping {
-                                Picker("", selection: $model.loopGap) {
+                                Picker("", selection: m.loopGap) {
                                     Text("0.0s gap").tag(TimeInterval(0.0))
                                     Text("0.5s gap").tag(TimeInterval(0.5))
                                     Text("1.0s gap").tag(TimeInterval(1.0))
@@ -74,7 +85,7 @@ struct SegmentsReaderView: View {
                                 .frame(width: 90)
                             }
                         }
-                        
+
                         HStack(spacing: 2) {
                             Text("Offset")
                                 .font(.subheadline)
@@ -82,7 +93,7 @@ struct SegmentsReaderView: View {
 
                             TextField(
                                 "",
-                                value: $model.timeOffset,
+                                value: m.timeOffset,
                                 format: .number.precision(.fractionLength(1))
                             )
                             .frame(width: 54)
@@ -93,14 +104,14 @@ struct SegmentsReaderView: View {
 
                             Stepper(
                                 "",
-                                value: $model.timeOffset,
+                                value: m.timeOffset,
                                 in: -20...20,
                                 step: 0.1
                             )
                             .labelsHidden()
                         }
-                        
-                        Picker("Speed", selection: $model.playbackSpeed) {
+
+                        Picker("Speed", selection: speedBinding) {
                             Text("0.5x").tag(Float(0.5))
                             Text("0.75x").tag(Float(0.75))
                             Text("1.0x").tag(Float(1.0))
@@ -142,6 +153,8 @@ struct SegmentsReaderView: View {
         }
     }
 
+    // MARK: - Empty state
+
     private var emptyState: some View {
         VStack(spacing: 10) {
             Image(systemName: "text.page.badge.magnifyingglass")
@@ -155,6 +168,8 @@ struct SegmentsReaderView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    // MARK: - Helpers
 
     private func presentFilePicker() {
 #if os(macOS)

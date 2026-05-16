@@ -8,7 +8,8 @@ struct PhoneticCellView: View {
     let cellWidth: CGFloat
     var isPopup: Bool = false
 
-    @EnvironmentObject private var popupModel: PopupModel
+//    @EnvironmentObject private var popupModel: PopupModel
+    @Environment(PopupModel.self) var popupModel
 
     var body: some View {
         if isPopup {

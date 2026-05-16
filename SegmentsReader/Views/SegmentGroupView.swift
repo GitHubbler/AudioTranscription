@@ -7,7 +7,7 @@ struct SegmentGroupView: View {
     @State private var showsPhoneticGrid = false
     @State private var showsIPA = false
 
-    @EnvironmentObject private var model: SegmentsReaderModel
+    @Environment(SegmentsReaderModel.self) private var model
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {

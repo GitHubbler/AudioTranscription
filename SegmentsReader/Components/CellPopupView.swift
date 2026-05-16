@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CellPopupView: View {
-    @EnvironmentObject var popupModel: PopupModel
+    @Environment(PopupModel.self) var popupModel
     @State private var dragOffset: CGSize = .zero
 
     var body: some View {

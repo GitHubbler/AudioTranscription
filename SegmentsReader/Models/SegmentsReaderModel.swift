@@ -26,6 +26,10 @@ final class SegmentsReaderModel: ObservableObject {
     @Published var isLooping: Bool = false
     @Published var loopGap: TimeInterval = 0.0
 
+    /// Seconds added to every segment's in/out points at playback time.
+    /// Compensates for leading silence in the audio source. Default is 0.
+    @Published var timeOffset: Double = 0.0
+
     var isNotEmptySegments: Bool {
         !segments.isEmpty
     }
@@ -44,12 +48,16 @@ final class SegmentsReaderModel: ObservableObject {
 
         stopAudio()
 
-        guard let inPoint = segment.record.audioInPoint,
-              let outPoint = segment.record.audioOutPoint,
+        guard let rawInPoint = segment.record.audioInPoint,
+              let rawOutPoint = segment.record.audioOutPoint,
               let audioName = segment.record.sourceAudio,
               let jsonURL = fileURL else {
             return
         }
+
+        // Apply the calibration offset; clamp in-point to ≥ 0.
+        let inPoint  = max(0, rawInPoint  + timeOffset)
+        let outPoint = max(inPoint + 0.01, rawOutPoint + timeOffset)
 
         let audioURL = jsonURL.deletingLastPathComponent().appendingPathComponent(audioName)
         let playerItem = AVPlayerItem(url: audioURL)
@@ -59,8 +67,7 @@ final class SegmentsReaderModel: ObservableObject {
         self.playingSegmentID = segment.id
         
         let inTime = CMTime(seconds: inPoint, preferredTimescale: 600)
-        let outTime = CMTime(seconds: outPoint, preferredTimescale: 600)
-        
+
         // forwardPlaybackEndTime is intentionally not set here;
         // the boundary time observer handles stop/loop at outPoint.
         

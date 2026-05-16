@@ -75,6 +75,31 @@ struct SegmentsReaderView: View {
                             }
                         }
                         
+                        HStack(spacing: 2) {
+                            Text("Offset")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            TextField(
+                                "",
+                                value: $model.timeOffset,
+                                format: .number.precision(.fractionLength(1))
+                            )
+                            .frame(width: 54)
+                            .multilineTextAlignment(.trailing)
+
+                            Text("s")
+                                .foregroundStyle(.secondary)
+
+                            Stepper(
+                                "",
+                                value: $model.timeOffset,
+                                in: -20...20,
+                                step: 0.1
+                            )
+                            .labelsHidden()
+                        }
+                        
                         Picker("Speed", selection: $model.playbackSpeed) {
                             Text("0.5x").tag(Float(0.5))
                             Text("0.75x").tag(Float(0.75))

@@ -18,20 +18,32 @@ final class SegmentsReaderModel {
     private(set) var playbackSpeed: Float = 1.0
 
     var isLooping: Bool = false {
-        didSet { UserDefaults.standard.set(isLooping, forKey: Self.isLoopingKey) }
+    didSet {
+        UserDefaults.standard.set(isLooping, forKey: Self.isLoopingKey)
+        if playingSegmentID != nil { restartPlaybackIfNeeded() }
     }
+}
     var loopGap: TimeInterval = 0.0 {
-        didSet { UserDefaults.standard.set(loopGap, forKey: Self.loopGapKey) }
+    didSet {
+        UserDefaults.standard.set(loopGap, forKey: Self.loopGapKey)
+        if playingSegmentID != nil { restartPlaybackIfNeeded() }
     }
+}
 
     var timeOffset: Double = 0.0 {
-        didSet { UserDefaults.standard.set(timeOffset, forKey: Self.timeOffsetKey) }
+    didSet {
+        UserDefaults.standard.set(timeOffset, forKey: Self.timeOffsetKey)
+        if playingSegmentID != nil { restartPlaybackIfNeeded() }
     }
+}
     
     /// Seconds added to every segment's out point at playback time. Default is 0.
     var outpointOffset: Double = 0.0 {
-        didSet { UserDefaults.standard.set(outpointOffset, forKey: Self.outpointOffsetKey) }
+    didSet {
+        UserDefaults.standard.set(outpointOffset, forKey: Self.outpointOffsetKey)
+        if playingSegmentID != nil { restartPlaybackIfNeeded() }
     }
+}
 
     var isNotEmptySegments: Bool { !segments.isEmpty }
 
@@ -175,7 +187,20 @@ final class SegmentsReaderModel {
 
     // MARK: - Private playback helpers
 
-    private func addTimeObserver(for segment: ReaderSegment, player: AVPlayer, inPoint: Double, outPoint: Double, inTime: CMTime) {
+private func restartPlaybackIfNeeded() {
+    // If a segment is currently playing, restart playback to apply new settings.
+    guard let currentID = playingSegmentID,
+          let segment = segments.first(where: { $0.id == currentID }) else { return }
+    // Preserve current playback speed.
+    let currentSpeed = playbackSpeed
+    // Stop existing playback.
+    stopAudio()
+    // Re‑play the same segment with updated offsets/gap/looping.
+    setPlaybackSpeed(currentSpeed)
+    playAudio(for: segment)
+}
+
+private func addTimeObserver(for segment: ReaderSegment, player: AVPlayer, inPoint: Double, outPoint: Double, inTime: CMTime) {
         // A boundary observer fires during playback the moment the playhead
         // reaches outPoint — before the player can stop — so loop logic runs.
         let outTimeValue = NSValue(time: CMTime(seconds: outPoint, preferredTimescale: 600))

@@ -72,11 +72,20 @@ struct AudioTranscriptionEngine {
         try await requestSpeechRecognitionAuthorization()
 
         if #available(macOS 26.0, *) {
-            return try await transcribeWithSpeechAnalyzer(
-                fileURL: fileURL,
-                language: language,
-                eventHandler: eventHandler
-            )
+            do {
+                return try await transcribeWithSpeechAnalyzer(
+                    fileURL: fileURL,
+                    language: language,
+                    eventHandler: eventHandler
+                )
+            } catch AudioTranscriptionError.unsupportedLocale {
+                // Fall back to legacy recognizer if the modern one doesn't support this language (e.g. Romanian)
+                return try await transcribeWithSFSpeechRecognizer(
+                    fileURL: fileURL,
+                    language: language,
+                    eventHandler: eventHandler
+                )
+            }
         } else {
             return try await transcribeWithSFSpeechRecognizer(
                 fileURL: fileURL,
